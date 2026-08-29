@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Tracker - Rooms Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: #090d16;
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    .wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #1f2937;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+    }
+    .brand h1 { font-size: 22px; font-weight: 800; color: #fff; }
+    .brand p { font-size: 13px; color: #94a3b8; }
+
+    /* Create Room Card */
+    .create-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    .create-title { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .create-desc { font-size: 13px; color: #94a3b8; margin-bottom: 18px; }
+    
+    .create-form {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .input-room-name {
+      flex: 1;
+      min-width: 240px;
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-room-name:focus { border-color: #6366f1; }
+    
+    .btn-create {
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+    }
+    .btn-create:hover { background: linear-gradient(135deg, #4338ca, #4f46e5); transform: translateY(-1px); }
+    .btn-create:active { transform: translateY(0); }
+
+    /* Rooms List Section */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-title { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .badge-count {
+      background: #1e293b;
+      color: #818cf8;
+      border: 1px solid #334155;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .room-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .room-card:hover { border-color: #4f46e5; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+
+    .room-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .room-name { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.3; }
+    .room-id { font-size: 11px; color: #818cf8; font-family: monospace; background: #1e293b; padding: 3px 8px; border-radius: 6px; margin-top: 4px; display: inline-block; }
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .btn-delete:hover { color: #ef4444; }
+
+    /* Live Clickable Hyperlink Display */
+    .hyperlink-display {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #090d16;
+      border: 1px solid #1f2937;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .hyperlink-text {
+      color: #38bdf8;
+      font-size: 12px;
+      text-decoration: underline;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .hyperlink-text:hover { color: #7dd3fc; }
+
+    .room-meta {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .room-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-open {
+      flex: 1;
+      background: #4f46e5;
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-open:hover { background: #4338ca; }
+    
+    .btn-copy-card {
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-copy-card:hover { background: #374151; color: #fff; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      background: #111827;
+      border: 1px dashed #1f2937;
+      border-radius: 20px;
+      color: #64748b;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #fff;
+      padding: 14px 22px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 9999;
+      animation: fadeIn 0.3s;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <div class="wrapper">
+    
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+        </div>
+        <div>
+          <h1>Multi-Person Location Hub</h1>
+          <p>Create tracking rooms • Only you view the map • Others get 1-click share links</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Create Room Card -->
+    <div class="create-card">
+      <div class="create-title">Create a New Tracking Room</div>
+      <div class="create-desc">Clicking create will list your room below with clickable Hyperlinks to share.</div>
+      
+      <form id="createRoomForm" class="create-form" onsubmit="event.preventDefault(); createRoom();">
+        <input id="roomNameInput" class="input-room-name" type="text" placeholder="Enter Room Name (e.g. Family Trip, Delivery Team, Friends)" required autofocus>
+        <button type="submit" class="btn-create">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Create Room</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Active Rooms List -->
+    <div>
+      <div class="section-header">
+        <div class="section-title">
+          <span>Your Active Tracking Rooms</span>
+          <span id="roomCountBadge" class="badge-count">0</span>
+        </div>
+      </div>
+
+      <!-- Rooms Grid -->
+      <div id="roomsGrid" class="rooms-grid"></div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">📍</div>
+        <div style="font-size: 16px; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">No tracking rooms created yet</div>
+        <div style="font-size: 13px;">Type a room name above and click <b>Create Room</b> to get started!</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    <span id="toastMsg">Hyperlink copied to clipboard!</span>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'antigravity_tracking_rooms';
+    let baseShareOrigin = window.location.origin;
+
+    // Fetch server network IP so share links are NEVER localhost
+    async function loadServerConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.network_base_url) {
+            baseShareOrigin = cfg.network_base_url;
+            renderRoomsList();
+          }
+        }
+      } catch (e) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          baseShareOrigin = `http://10.1.1.173:8080`;
+          renderRoomsList();
+        }
+      }
+    }
+    loadServerConfig();
+
+    function getRooms() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveRooms(rooms) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
+    }
+
+    function createRoom() {
+      const input = document.getElementById('roomNameInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const roomId = 'room-' + Math.random().toString(36).substring(2, 8);
+      const newRoom = {
+        id: roomId,
+        name: name,
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        timestamp: Date.now()
+      };
+
+      const rooms = getRooms();
+      rooms.unshift(newRoom);
+      saveRooms(rooms);
+
+      input.value = '';
+      renderRoomsList();
+      showToast(`Room "${name}" created with clickable Hyperlink!`);
+    }
+
+    function deleteRoom(roomId, event) {
+      if (event) event.stopPropagation();
+      if (!confirm("Are you sure you want to remove this room from your list?")) return;
+
+      let rooms = getRooms();
+      rooms = rooms.filter(r => r.id !== roomId);
+      saveRooms(rooms);
+      renderRoomsList();
+      showToast("Room deleted.");
+    }
+
+    // Copy in True Rich Hyperlink Format (HTML + Text)
+    function copyShareHyperlink(roomId, roomName, event) {
+      if (event) event.stopPropagation();
+      const shareUrl = `${baseShareOrigin}/share.html?room=${roomId}`;
+      const htmlContent = `<a href="${shareUrl}" target="_blank">${shareUrl}</a>`;
+      const textContent = shareUrl;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+        const blobText = new Blob([textContent], { type: 'text/plain' });
+        const item = new ClipboardItem({
+          'text/html': blobHtml,
+          'text/plain': blobText
+        });
+
+        navigator.clipboard.write([item]).then(() => {
+          showToast("Hyperlink copied! (Clickable format ready to paste)");
+        }).catch(() => {
+          fallbackCopyHyperlink(shareUrl, htmlContent);
+        });
+      } else {
+        fallbackCopyHyperlink(shareUrl, htmlContent);
+      }
+    }
+
+    function fallbackCopyHyperlink(url, html) {
+      const container = document.createElement('div');
+      container.innerHTML = html;
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      try {
+        document.execCommand('copy');
+        showToast("Hyperlink copied! (Clickable link ready to paste)");
+      } catch (err) {
+        showToast(`Link copied: ${url}`);
+      }
+
+      document.body.removeChild(container);
+    }
+
+    function renderRoomsList() {
+      const rooms = getRooms();
+      const grid = document.getElementById('roomsGrid');
+      const empty = document.getElementById('emptyState');
+      const badge = document.getElementById('roomCountBadge');
+
+      badge.innerText = rooms.length;
+
+      if (rooms.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      grid.innerHTML = '';
+
+      rooms.forEach(room => {
+        const shareUrl = `${baseShareOrigin}/share.html?room=${room.id}`;
+        const card = document.createElement('div');
+        card.className = 'room-card';
+        card.innerHTML = `
+          <div>
+            <div class="room-header">
+              <div>
+                <div class="room-name">${escapeHtml(room.name)}</div>
+                <div class="room-id">${room.id}</div>
+              </div>
+              <button class="btn-delete" title="Delete Room" onclick="deleteRoom('${room.id}', event)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Clickable Hyperlink Display -->
+            <div class="hyperlink-display" title="Clickable Hyperlink">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+              <a href="${shareUrl}" target="_blank" class="hyperlink-text">${shareUrl}</a>
+            </div>
+            
+            <div class="room-meta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>Created ${room.createdAt || 'Recently'}</span>
+            </div>
+          </div>
+
+          <div class="room-actions">
+            <a href="admin.html?room=${room.id}" class="btn-open">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+              <span>Open Map</span>
+            </a>
+            <button class="btn-copy-card" title="Copy Clickable Hyperlink" onclick="copyShareHyperlink('${room.id}', '${escapeHtml(room.name)}', event)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+              <span>Copy Hyperlink</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
+    window.addEventListener('DOMContentLoaded', renderRoomsList);
+  </script>
+</body>
+</html>
