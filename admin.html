@@ -143,6 +143,7 @@
       padding: 14px;
       margin-bottom: 10px;
       transition: all 0.2s;
+      position: relative;
     }
     .person-card:hover { border-color: #4f46e5; }
     
@@ -154,10 +155,11 @@
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: #34d399;
       text-decoration: none;
-      padding: 8px 12px;
+      padding: 7px 11px;
       border-radius: 8px;
       font-size: 12px;
       font-weight: 600;
+      transition: all 0.2s;
     }
     .btn-gmaps:hover { background: rgba(16, 185, 129, 0.3); }
 
@@ -165,12 +167,39 @@
       background: rgba(99, 102, 241, 0.15);
       border: 1px solid rgba(99, 102, 241, 0.3);
       color: #818cf8;
-      padding: 8px 12px;
+      padding: 7px 11px;
       border-radius: 8px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
     }
+    .btn-focus:hover { background: rgba(99, 102, 241, 0.3); }
+
+    .btn-remove-person {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 7px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .btn-remove-person:hover { background: rgba(239, 68, 68, 0.3); }
+
+    .btn-clear-all {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .btn-clear-all:hover { color: #f87171; }
 
     #toast {
       position: fixed;
@@ -234,10 +263,10 @@
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <h4 style="font-size: 14px; font-weight: 700;">Share Clickable Hyperlink</h4>
-          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">HTTPS Ready</span>
+          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Auto-Saved</span>
         </div>
         <p style="font-size: 12px; color: #9ca3af; margin-top: 4px; line-height: 1.4;">
-          Send this link to anyone on WhatsApp. When clicked on mobile or laptop, their GPS turns on and syncs to your map. <b>They will NOT see the map</b>.
+          Send this link to friends. When opened on mobile, their location automatically syncs and <b>stays saved on your map</b> until removed.
         </p>
 
         <!-- Clickable Hyperlink Display -->
@@ -281,17 +310,20 @@
         </div>
       </div>
 
-      <!-- TRACKED PERSONS LIST -->
+      <!-- TRACKED PERSONS LIST (WITH PERSISTENCE) -->
       <div class="card" style="flex: 1; max-height: 480px; overflow-y: auto;">
-        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between;">
-          <span>Tracked Persons List</span>
-          <span id="activeCount" style="color: #818cf8;">0</span>
-        </h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="font-size: 14px; font-weight: 700;">
+            <span>Tracked Persons List</span>
+            <span id="activeCount" style="color: #818cf8; margin-left: 4px;">0</span>
+          </h4>
+          <button id="btnClearAll" class="btn-clear-all" onclick="clearAllPersons()" style="display: none;">Clear All</button>
+        </div>
 
         <div id="emptyList" style="text-align: center; padding: 36px 12px; color: #64748b; font-size: 13px;">
           <div style="font-size: 28px; margin-bottom: 8px;">👥</div>
-          Waiting for people to click the hyperlink...<br>
-          <span style="font-size: 11px; color: #475569;">When someone clicks your link, their location appears here automatically.</span>
+          Waiting for people to click the link...<br>
+          <span style="font-size: 11px; color: #475569;">Their locations stay permanently saved on your map until you remove them.</span>
         </div>
 
         <div id="peopleList"></div>
@@ -311,7 +343,38 @@
     const roomId = urlParams.get('room') || 'room-' + Math.random().toString(36).substring(2, 8);
     document.getElementById('displayRoomId').innerText = roomId;
 
+    const STORAGE_ROOM_PEOPLE_KEY = `antigravity_room_people_${roomId}`;
+
     let qrInstance = null;
+    const trackedPersons = {};
+    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
+    let colorIdx = 0;
+
+    // Load saved persons from permanent LocalStorage
+    function loadSavedPersons() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_ROOM_PEOPLE_KEY)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    // Save current persons to permanent LocalStorage
+    function savePersonsToStorage() {
+      const dataToSave = {};
+      Object.entries(trackedPersons).forEach(([id, p]) => {
+        dataToSave[id] = {
+          id: p.id,
+          name: p.name,
+          lat: p.lat,
+          lng: p.lng,
+          accuracy: p.accuracy,
+          timestamp: p.timestamp,
+          color: p.color
+        };
+      });
+      localStorage.setItem(STORAGE_ROOM_PEOPLE_KEY, JSON.stringify(dataToSave));
+    }
 
     // Subpath-aware URL resolver (Handles GitHub Pages /blog/ properly)
     function buildShareUrl() {
@@ -339,26 +402,47 @@
       attribution: '&copy; OpenStreetMap', maxZoom: 19
     }).addTo(map);
 
-    const trackedPersons = {};
-    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
-    let colorIdx = 0;
+    // Create Pin Helper
+    function createMapPin(p) {
+      const color = p.color || colors[colorIdx++ % colors.length];
+      const icon = L.divIcon({
+        className: 'custom-pin',
+        html: `<div style="background: ${color}; color: white; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: bold; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap;">📍 ${p.name || 'Friend'}</div>`,
+        iconSize: [80, 28], iconAnchor: [40, 14]
+      });
 
-    function handleLocation(data) {
+      const marker = L.marker([p.lat, p.lng], { icon: icon }).addTo(map);
+      return { marker, color };
+    }
+
+    // Restore saved persons immediately on page open/refresh
+    function restoreSavedData() {
+      const saved = loadSavedPersons();
+      const savedEntries = Object.entries(saved);
+
+      if (savedEntries.length > 0) {
+        savedEntries.forEach(([id, p]) => {
+          const { marker, color } = createMapPin(p);
+          trackedPersons[id] = { ...p, marker, color };
+        });
+
+        renderList();
+
+        // Fit map bounds to show all restored friends
+        const group = new L.featureGroup(Object.values(trackedPersons).map(x => x.marker));
+        map.fitBounds(group.getBounds().pad(0.2));
+      }
+    }
+    restoreSavedData();
+
+    // Handle Incoming / Updated Location from Person
+    function handleLocation(data, isNewFromNetwork = false) {
       if (!data || !data.lat || !data.lng) return;
 
       const pId = data.id || 'user_' + Math.random().toString(36).substring(2, 6);
       
       if (!trackedPersons[pId]) {
-        const color = colors[colorIdx % colors.length];
-        colorIdx++;
-
-        const icon = L.divIcon({
-          className: 'custom-pin',
-          html: `<div style="background: ${color}; color: white; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: bold; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap;">📍 ${data.name || 'Friend'}</div>`,
-          iconSize: [80, 28], iconAnchor: [40, 14]
-        });
-
-        const marker = L.marker([data.lat, data.lng], { icon: icon }).addTo(map);
+        const { marker, color } = createMapPin(data);
         trackedPersons[pId] = { ...data, marker, color };
 
         if (Object.keys(trackedPersons).length === 1) {
@@ -368,20 +452,51 @@
           map.fitBounds(group.getBounds().pad(0.2));
         }
 
-        showToast(`${data.name || 'A person'} clicked link and shared location!`);
+        if (isNewFromNetwork) {
+          showToast(`${data.name || 'A person'} connected and shared location!`);
+        }
       } else {
         trackedPersons[pId].lat = data.lat;
         trackedPersons[pId].lng = data.lng;
+        trackedPersons[pId].name = data.name || trackedPersons[pId].name;
         trackedPersons[pId].timestamp = data.timestamp || new Date().toLocaleTimeString();
         trackedPersons[pId].marker.setLatLng([data.lat, data.lng]);
       }
 
+      // Persist immediately
+      savePersonsToStorage();
       renderList();
     }
+
+    // Remove single person from map and permanent storage
+    window.removePerson = function(pId) {
+      const person = trackedPersons[pId];
+      if (!person) return;
+
+      if (confirm(`Remove "${person.name}" from the map?`)) {
+        map.removeLayer(person.marker);
+        delete trackedPersons[pId];
+        savePersonsToStorage();
+        renderList();
+        showToast(`Removed "${person.name}" from map.`);
+      }
+    };
+
+    // Clear all persons from room
+    window.clearAllPersons = function() {
+      if (confirm("Remove all persons from this room map?")) {
+        Object.values(trackedPersons).forEach(p => map.removeLayer(p.marker));
+        for (let key in trackedPersons) delete trackedPersons[key];
+        savePersonsToStorage();
+        renderList();
+        showToast("All persons cleared from map.");
+      }
+    };
 
     function renderList() {
       const list = document.getElementById('peopleList');
       const empty = document.getElementById('emptyList');
+      const clearBtn = document.getElementById('btnClearAll');
       const people = Object.values(trackedPersons);
 
       document.getElementById('activeCount').innerText = people.length;
@@ -389,11 +504,13 @@
 
       if (people.length === 0) {
         empty.style.display = 'block';
+        clearBtn.style.display = 'none';
         list.innerHTML = '';
         return;
       }
 
       empty.style.display = 'none';
+      clearBtn.style.display = 'inline-block';
       list.innerHTML = '';
 
       people.forEach(p => {
@@ -404,20 +521,32 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="width: 10px; height: 10px; border-radius: 50%; background: ${p.color}; display: inline-block;"></span>
-              <b style="color: #fff; font-size: 14px;">${p.name || 'Friend'}</b>
+              <b style="color: #fff; font-size: 14px;">${escapeHtml(p.name || 'Friend')}</b>
             </div>
-            <span style="font-size: 11px; color: #9ca3af;">${p.timestamp}</span>
+            <span style="font-size: 11px; color: #9ca3af;">${p.timestamp || 'Saved'}</span>
           </div>
           <div style="font-size: 12px; color: #cbd5e1; font-family: monospace; margin-bottom: 10px;">
             Coords: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <button onclick="map.setView([${p.lat}, ${p.lng}], 16)" class="btn-focus">Focus Pin</button>
-            <a href="${gmapsUrl}" target="_blank" class="btn-gmaps">Open in Google Maps ↗</a>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+            <div style="display: flex; gap: 6px;">
+              <button onclick="map.setView([${p.lat}, ${p.lng}], 16)" class="btn-focus">Focus</button>
+              <a href="${gmapsUrl}" target="_blank" class="btn-gmaps">Google Maps ↗</a>
+            </div>
+            <button onclick="removePerson('${p.id}')" class="btn-remove-person" title="Remove person from map">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
           </div>
         `;
         list.appendChild(card);
       });
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
     }
 
     // 1. Worldwide Realtime MQTT Cloud Sync
@@ -437,7 +566,7 @@
     mqttClient.on('message', (topic, message) => {
       try {
         const payload = JSON.parse(message.toString());
-        handleLocation(payload);
+        handleLocation(payload, true);
       } catch (e) {
         console.error(e);
       }
@@ -454,7 +583,7 @@
         const res = await fetch('/api/locations');
         if (res.ok) {
           const data = await res.json();
-          Object.values(data).forEach(p => handleLocation(p));
+          Object.values(data).forEach(p => handleLocation(p, false));
         }
       } catch (e) {}
     }, 1500);
@@ -462,7 +591,7 @@
     // 3. Local BroadcastChannel
     const bc = new BroadcastChannel('location_channel_' + roomId);
     bc.onmessage = (e) => {
-      if (e.data && e.data.lat) handleLocation(e.data);
+      if (e.data && e.data.lat) handleLocation(e.data, true);
     };
 
     // Copy Clickable Hyperlink to Clipboard

@@ -166,7 +166,7 @@
       margin-bottom: 14px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
     }
 
     .room-actions { display: flex; gap: 8px; }
@@ -247,7 +247,7 @@
         </div>
         <div>
           <h1>Multi-Person Location Hub</h1>
-          <p>Create tracking rooms • Only you view the map • Others get 1-click share links</p>
+          <p>Create tracking rooms • Only you view the map • Data permanently saved until deleted</p>
         </div>
       </div>
     </header>
@@ -294,7 +294,6 @@
   <script>
     const STORAGE_KEY = 'antigravity_tracking_rooms';
 
-    // Universal URL resolver (Works seamlessly on localhost AND GitHub Pages subfolders like /blog/)
     function buildShareUrl(roomId) {
       const pathSegments = window.location.pathname.split('/');
       pathSegments.pop(); // Remove index.html
@@ -312,6 +311,15 @@
 
     function saveRooms(rooms) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
+    }
+
+    function getRoomPeopleCount(roomId) {
+      try {
+        const people = JSON.parse(localStorage.getItem(`antigravity_room_people_${roomId}`)) || {};
+        return Object.keys(people).length;
+      } catch(e) {
+        return 0;
+      }
     }
 
     function createRoom() {
@@ -338,13 +346,17 @@
 
     function deleteRoom(roomId, event) {
       if (event) event.stopPropagation();
-      if (!confirm("Are you sure you want to remove this room from your list?")) return;
+      if (!confirm("Are you sure you want to remove this room and its saved map locations?")) return;
 
       let rooms = getRooms();
       rooms = rooms.filter(r => r.id !== roomId);
       saveRooms(rooms);
+
+      // Clean up stored locations for this room
+      localStorage.removeItem(`antigravity_room_people_${roomId}`);
+
       renderRoomsList();
-      showToast("Room deleted.");
+      showToast("Room and saved location data deleted.");
     }
 
     function copyShareHyperlink(roomId, event) {
@@ -396,6 +408,7 @@
 
       rooms.forEach(room => {
         const shareUrl = buildShareUrl(room.id);
+        const count = getRoomPeopleCount(room.id);
         const card = document.createElement('div');
         card.className = 'room-card';
         card.innerHTML = `
@@ -422,11 +435,8 @@
             </div>
             
             <div class="room-meta">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span>Created ${room.createdAt || 'Recently'}</span>
+              <span>📅 ${room.createdAt || 'Recently'}</span>
+              <span style="color: ${count > 0 ? '#34d399' : '#94a3b8'}; font-weight: 600;">👥 ${count} Saved Person${count === 1 ? '' : 's'}</span>
             </div>
           </div>
 
