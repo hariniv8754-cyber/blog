@@ -28,7 +28,7 @@ def get_local_ip():
 LOCAL_IP = get_local_ip()
 
 def start_public_tunnel():
-    """Starts an automatic zero-config public HTTPS tunnel (No GitHub, No Accounts required)"""
+    """Starts an automatic zero-config public HTTPS tunnel"""
     global public_https_url
     try:
         cmd = ["ssh", "-R", f"80:localhost:{PORT}", "-o", "StrictHostKeyChecking=no", "-o", "ServerAliveInterval=30", "nokey@localhost.run"]
@@ -41,7 +41,7 @@ def start_public_tunnel():
             if match:
                 public_https_url = match.group(1)
                 print("\n" + "=" * 65)
-                print("[LIVE PUBLIC HTTPS LINK READY FOR WHATSAPP (BLUE CLICKABLE LINK)]")
+                print("[LIVE PUBLIC HTTPS LINK READY FOR WHATSAPP]")
                 print(f"   👉 {public_https_url}/share.html")
                 print("=" * 65 + "\n")
                 break
@@ -62,13 +62,18 @@ class FastLocationHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
+
+        if parsed_url.path == '/' or parsed_url.path == '':
+            self.send_response(302)
+            self.send_header('Location', '/login.html')
+            self.end_headers()
+            return
         
         if parsed_url.path == '/api/config':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             
-            # Prefer public HTTPS URL for WhatsApp clickable links
             base_url = public_https_url if public_https_url else f"http://{LOCAL_IP}:{PORT}"
             cfg = {
                 'local_ip': LOCAL_IP,
@@ -127,21 +132,19 @@ if __name__ == "__main__":
     web_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(web_dir)
 
-    # Start automatic background public HTTPS tunnel
     tunnel_thread = threading.Thread(target=start_public_tunnel, daemon=True)
     tunnel_thread.start()
 
     print("=" * 65)
     print("MULTI-PERSON LOCATION SERVER RUNNING")
     print("=" * 65)
-    print(f"\n[ADMIN DASHBOARD (YOUR BROWSER)]:")
+    print(f"\n[LOGIN ENTRY]:")
+    print(f"   --> http://localhost:{PORT}/login.html")
+    print(f"\n[ADMIN DASHBOARD]:")
     print(f"   --> http://localhost:{PORT}/index.html")
-    print(f"\n[LOCAL WI-FI LINK]:")
-    print(f"   --> http://{LOCAL_IP}:{PORT}/share.html")
-    print("\nStarting automatic Public HTTPS link generation...")
     print("=" * 65 + "\n")
 
-    webbrowser.open(f"http://localhost:{PORT}/index.html")
+    webbrowser.open(f"http://localhost:{PORT}/login.html")
 
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), FastLocationHandler) as httpd:

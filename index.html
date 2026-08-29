@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Location Tracker - Rooms Hub</title>
+  
+  <!-- Authentication Guard -->
+  <script>
+    const loggedInUser = localStorage.getItem('antigravity_logged_in_user');
+    if (!loggedInUser) {
+      window.location.href = 'login.html';
+    }
+  </script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body {
@@ -41,6 +50,41 @@
     }
     .brand h1 { font-size: 22px; font-weight: 800; color: #fff; }
     .brand p { font-size: 13px; color: #94a3b8; }
+
+    .header-user-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-pill {
+      background: #111827;
+      border: 1px solid #1f2937;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .user-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+
+    .btn-logout {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { background: rgba(239, 68, 68, 0.3); color: #fff; }
 
     .create-card {
       background: #111827;
@@ -247,8 +291,23 @@
         </div>
         <div>
           <h1>Multi-Person Location Hub</h1>
-          <p>Create tracking rooms • Only you view the map • Data permanently saved until deleted</p>
+          <p>Create tracking rooms • Only you view the map • Data permanently saved</p>
         </div>
+      </div>
+
+      <div class="header-user-controls">
+        <div class="user-pill">
+          <span class="user-dot"></span>
+          <span>User: <b id="displayUserId" style="color: #fff;">...</b></span>
+        </div>
+        <button class="btn-logout" onclick="logoutUser()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Logout</span>
+        </button>
       </div>
     </header>
 
@@ -293,6 +352,21 @@
 
   <script>
     const STORAGE_KEY = 'antigravity_tracking_rooms';
+
+    // Display logged in User ID
+    try {
+      const session = JSON.parse(localStorage.getItem('antigravity_logged_in_user'));
+      if (session && session.userId) {
+        document.getElementById('displayUserId').innerText = session.userId;
+      }
+    } catch(e) {}
+
+    function logoutUser() {
+      if (confirm("Are you sure you want to log out?")) {
+        localStorage.removeItem('antigravity_logged_in_user');
+        window.location.href = 'login.html';
+      }
+    }
 
     function buildShareUrl(roomId) {
       const pathSegments = window.location.pathname.split('/');
@@ -352,7 +426,6 @@
       rooms = rooms.filter(r => r.id !== roomId);
       saveRooms(rooms);
 
-      // Clean up stored locations for this room
       localStorage.removeItem(`antigravity_room_people_${roomId}`);
 
       renderRoomsList();

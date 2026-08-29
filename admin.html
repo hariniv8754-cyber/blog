@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Live Map - Multi-Person Location</title>
   
+  <!-- Authentication Guard -->
+  <script>
+    const loggedInUser = localStorage.getItem('antigravity_logged_in_user');
+    if (!loggedInUser) {
+      window.location.href = 'login.html';
+    }
+  </script>
+
   <!-- Leaflet Map CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -63,6 +71,18 @@
     }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #eab308; }
     .status-dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
+
+    .btn-logout-small {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-logout-small:hover { background: rgba(239, 68, 68, 0.3); color: #fff; }
 
     .main-container {
       max-width: 1440px;
@@ -242,6 +262,7 @@
       <div class="status-pill" style="color: #818cf8;">
         Room: <b id="displayRoomId" style="margin-left: 4px;">...</b>
       </div>
+      <button class="btn-logout-small" onclick="logoutAdmin()">Logout</button>
     </div>
   </header>
 
@@ -339,10 +360,16 @@
   </div>
 
   <script>
+    function logoutAdmin() {
+      if (confirm("Are you sure you want to log out?")) {
+        localStorage.removeItem('antigravity_logged_in_user');
+        window.location.href = 'login.html';
+      }
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     let roomId = urlParams.get('room');
 
-    // If no room query param provided, recall the last active room from localStorage
     if (!roomId) {
       roomId = localStorage.getItem('antigravity_last_active_room_id');
     }
@@ -359,7 +386,6 @@
     const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
     let colorIdx = 0;
 
-    // Load saved persons from permanent LocalStorage
     function loadSavedPersons() {
       try {
         return JSON.parse(localStorage.getItem(STORAGE_ROOM_PEOPLE_KEY)) || {};
@@ -368,7 +394,6 @@
       }
     }
 
-    // Save current persons to permanent LocalStorage
     function savePersonsToStorage() {
       const dataToSave = {};
       Object.entries(trackedPersons).forEach(([id, p]) => {
@@ -385,7 +410,6 @@
       localStorage.setItem(STORAGE_ROOM_PEOPLE_KEY, JSON.stringify(dataToSave));
     }
 
-    // Subpath-aware URL resolver (Handles GitHub Pages /blog/ properly)
     function buildShareUrl() {
       const pathSegments = window.location.pathname.split('/');
       pathSegments.pop(); // Remove admin.html
@@ -411,7 +435,6 @@
       attribution: '&copy; OpenStreetMap', maxZoom: 19
     }).addTo(map);
 
-    // Create Pin Helper
     function createMapPin(p) {
       const color = p.color || colors[colorIdx++ % colors.length];
       const icon = L.divIcon({
@@ -424,7 +447,6 @@
       return { marker, color };
     }
 
-    // Restore saved persons immediately on page open/refresh
     function restoreSavedData() {
       const saved = loadSavedPersons();
       const savedEntries = Object.entries(saved);
@@ -446,7 +468,6 @@
     }
     restoreSavedData();
 
-    // Handle Incoming / Updated Location from Person
     function handleLocation(data, isNewFromNetwork = false) {
       if (!data || !data.lat || !data.lng) return;
 
@@ -478,7 +499,6 @@
       renderList();
     }
 
-    // Remove single person from map and permanent storage
     window.removePerson = function(pId) {
       const person = trackedPersons[pId];
       if (!person) return;
@@ -489,7 +509,6 @@
         savePersonsToStorage();
         renderList();
         
-        // Clear retained topic on MQTT
         try {
           if (mqttClient && mqttClient.connected) {
             mqttClient.publish(`antigravity_tracker_v3/${roomId}/${pId}`, '', { qos: 1, retain: true });
@@ -500,7 +519,6 @@
       }
     };
 
-    // Clear all persons from room
     window.clearAllPersons = function() {
       if (confirm("Remove all persons from this room map?")) {
         Object.values(trackedPersons).forEach(p => {
@@ -574,7 +592,7 @@
       return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
     }
 
-    // 1. Worldwide Realtime MQTT Cloud Sync with Wildcard Subscription for Retained Locations
+    // Worldwide Realtime MQTT Cloud Sync
     const mqttTopic = `antigravity_tracker_v3/${roomId}/#`;
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
       clientId: 'host_' + Math.random().toString(36).substring(2, 8),
@@ -605,7 +623,7 @@
       document.getElementById('statusText').innerText = 'Reconnecting...';
     });
 
-    // 2. Local Fallback
+    // Local Fallback
     setInterval(async () => {
       try {
         const res = await fetch('/api/locations');
@@ -616,7 +634,7 @@
       } catch (e) {}
     }, 1500);
 
-    // 3. Local BroadcastChannel
+    // Local BroadcastChannel
     const bc = new BroadcastChannel('location_channel_' + roomId);
     bc.onmessage = (e) => {
       if (e.data && e.data.lat) handleLocation(e.data, true);
