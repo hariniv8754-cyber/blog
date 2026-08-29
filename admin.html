@@ -91,7 +91,6 @@
 
     .sidebar { display: flex; flex-direction: column; gap: 16px; }
 
-    /* Clickable Hyperlink Display Box */
     .hyperlink-card {
       background: #090d16;
       border: 1px solid #1f2937;
@@ -173,29 +172,6 @@
       cursor: pointer;
     }
 
-    /* Custom Domain URL Input Box */
-    .domain-config {
-      background: #090d16;
-      border: 1px dashed #374151;
-      padding: 10px;
-      border-radius: 10px;
-      margin-top: 10px;
-      font-size: 11px;
-    }
-    .domain-input {
-      width: 100%;
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 6px;
-      padding: 6px 8px;
-      font-size: 11px;
-      color: #93c5fd;
-      outline: none;
-      margin-top: 4px;
-      font-family: monospace;
-    }
-
-    /* Toast Notification */
     #toast {
       position: fixed;
       bottom: 24px;
@@ -298,12 +274,6 @@
           </button>
         </div>
 
-        <!-- Optional Custom Public URL (e.g. GitHub Pages / Vercel domain) -->
-        <div class="domain-config">
-          <span style="color: #94a3b8;">🌐 Public HTTPS Domain (Optional for WhatsApp Preview):</span>
-          <input id="customDomainInput" class="domain-input" type="text" placeholder="https://yourname.github.io/map-tracker" oninput="saveCustomDomain(this.value)">
-        </div>
-
         <!-- QR Code -->
         <div id="qrBox" style="display: none; text-align: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid #1f2937;">
           <span style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 8px;">Scan with phone camera to open clickable hyperlink</span>
@@ -331,10 +301,9 @@
 
   </div>
 
-  <!-- Toast Notification -->
   <div id="toast">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    <span id="toastMsg">Hyperlink copied in clickable format!</span>
+    <span id="toastMsg">Hyperlink copied!</span>
   </div>
 
   <script>
@@ -342,32 +311,18 @@
     const roomId = urlParams.get('room') || 'room-' + Math.random().toString(36).substring(2, 8);
     document.getElementById('displayRoomId').innerText = roomId;
 
-    let baseShareOrigin = localStorage.getItem('custom_tracker_domain') || window.location.origin;
     let qrInstance = null;
 
-    if (localStorage.getItem('custom_tracker_domain')) {
-      document.getElementById('customDomainInput').value = localStorage.getItem('custom_tracker_domain');
-    }
-
-    function saveCustomDomain(val) {
-      val = (val || '').trim().replace(/\/+$/, '');
-      if (val) {
-        localStorage.setItem('custom_tracker_domain', val);
-        baseShareOrigin = val;
-      } else {
-        localStorage.removeItem('custom_tracker_domain');
-        baseShareOrigin = window.location.origin;
-        loadServerConfig();
-      }
-      updateShareDisplay();
-    }
-
-    function getFullShareUrl() {
-      return `${baseShareOrigin}/share.html?room=${roomId}`;
+    // Subpath-aware URL resolver (Handles GitHub Pages /blog/ properly)
+    function buildShareUrl() {
+      const pathSegments = window.location.pathname.split('/');
+      pathSegments.pop(); // Remove admin.html
+      const dirPath = pathSegments.join('/').replace(/\/+$/, '');
+      return `${window.location.origin}${dirPath}/share.html?room=${roomId}`;
     }
 
     function updateShareDisplay() {
-      const shareUrl = getFullShareUrl();
+      const shareUrl = buildShareUrl();
       const anchor = document.getElementById('shareHyperlinkAnchor');
       anchor.href = shareUrl;
       anchor.innerText = shareUrl;
@@ -376,28 +331,7 @@
       qrEl.innerHTML = '';
       qrInstance = new QRCode(qrEl, { text: shareUrl, width: 120, height: 120 });
     }
-
-    async function loadServerConfig() {
-      if (localStorage.getItem('custom_tracker_domain')) {
-        updateShareDisplay();
-        return;
-      }
-      try {
-        const res = await fetch('/api/config');
-        if (res.ok) {
-          const cfg = await res.json();
-          if (cfg.network_base_url) {
-            baseShareOrigin = cfg.network_base_url;
-          }
-        }
-      } catch (e) {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          baseShareOrigin = `http://10.1.1.173:8080`;
-        }
-      }
-      updateShareDisplay();
-    }
-    loadServerConfig();
+    updateShareDisplay();
 
     // Initialize Leaflet Map
     let map = L.map('map').setView([20.5937, 78.9629], 5);
@@ -409,7 +343,6 @@
     const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
     let colorIdx = 0;
 
-    // Handle Incoming Location from Person
     function handleLocation(data) {
       if (!data || !data.lat || !data.lng) return;
 
@@ -428,7 +361,6 @@
         const marker = L.marker([data.lat, data.lng], { icon: icon }).addTo(map);
         trackedPersons[pId] = { ...data, marker, color };
 
-        // Focus on map
         if (Object.keys(trackedPersons).length === 1) {
           map.setView([data.lat, data.lng], 15);
         } else {
@@ -535,54 +467,37 @@
 
     // Copy Clickable Hyperlink to Clipboard
     document.getElementById('btnCopyHyperlink').addEventListener('click', () => {
-      const shareUrl = getFullShareUrl();
+      const shareUrl = buildShareUrl();
       const htmlContent = `<a href="${shareUrl}" target="_blank">${shareUrl}</a>`;
-      const textContent = shareUrl;
 
       if (navigator.clipboard && window.ClipboardItem) {
         const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-        const blobText = new Blob([textContent], { type: 'text/plain' });
-        const item = new ClipboardItem({
-          'text/html': blobHtml,
-          'text/plain': blobText
-        });
+        const blobText = new Blob([shareUrl], { type: 'text/plain' });
+        const item = new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText });
 
         navigator.clipboard.write([item]).then(() => {
           showToast("Hyperlink copied! (Clickable format ready to paste)");
         }).catch(() => {
-          fallbackCopyHyperlink(shareUrl, htmlContent);
+          fallbackCopy(shareUrl);
         });
       } else {
-        fallbackCopyHyperlink(shareUrl, htmlContent);
+        fallbackCopy(shareUrl);
       }
     });
 
-    function fallbackCopyHyperlink(url, html) {
-      const container = document.createElement('div');
-      container.innerHTML = html;
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      document.body.appendChild(container);
-
-      const range = document.createRange();
-      range.selectNodeContents(container);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      try {
-        document.execCommand('copy');
-        showToast("Hyperlink copied! (Clickable link ready to paste)");
-      } catch (err) {
-        showToast(`Link copied: ${url}`);
-      }
-
-      document.body.removeChild(container);
+    function fallbackCopy(url) {
+      const el = document.createElement('textarea');
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast(`Link copied: ${url}`);
     }
 
     // WhatsApp Action
     document.getElementById('btnWhatsApp').addEventListener('click', () => {
-      const shareUrl = getFullShareUrl();
+      const shareUrl = buildShareUrl();
       const msg = encodeURIComponent(`Please tap this link to share your location for our group tracking:\n${shareUrl}`);
       window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
     });
