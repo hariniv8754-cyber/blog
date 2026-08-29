@@ -41,7 +41,6 @@
       position: relative;
     }
 
-    /* Glow effect */
     .glow {
       position: absolute;
       top: -20px;
@@ -133,7 +132,6 @@
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
     }
 
-    /* Big Turn On GPS Action Button */
     .btn-gps {
       width: 100%;
       padding: 18px 20px;
@@ -161,7 +159,6 @@
       box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3);
     }
 
-    /* Live status badge */
     .status-card {
       margin-top: 20px;
       padding: 14px;
@@ -214,8 +211,6 @@
       font-size: 12px;
       color: #64748b;
     }
-
-    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -225,7 +220,6 @@
     
     <div class="content">
       
-      <!-- Icon -->
       <div id="iconBox" class="icon-wrapper">
         <svg id="svgPin" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -235,16 +229,14 @@
 
       <h1 id="mainHeading">Location Check-In</h1>
       <p id="mainDesc" class="desc">
-        Tap the button below to turn on your GPS. Your location will be safely sent to the host room.
+        Tap the button below to turn on your GPS. Your location will stay securely saved on the host's map.
       </p>
 
-      <!-- Name Input -->
       <div class="input-box">
         <label class="input-label">Your Name or Nickname</label>
-        <input id="userNameInput" type="text" class="name-input" placeholder="e.g. John, Sarah, Driver">
+        <input id="userNameInput" type="text" class="name-input" placeholder="e.g. John, Sarah, Friend">
       </div>
 
-      <!-- Turn On GPS Button -->
       <button id="btnTurnOnGPS" class="btn-gps">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -253,7 +245,6 @@
         <span id="btnText">Turn On GPS &amp; Share</span>
       </button>
 
-      <!-- Live Status Display -->
       <div class="status-card">
         <div id="statusDot" class="status-indicator"></div>
         <div class="status-info">
@@ -262,7 +253,6 @@
         </div>
       </div>
 
-      <!-- Privacy Guarantee -->
       <div class="privacy-tag">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -274,27 +264,31 @@
   </div>
 
   <script>
-    const clientId = 'user_' + Math.random().toString(36).substring(2, 8);
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default-room';
 
-    let defaultName = 'Friend ' + Math.floor(Math.random() * 900 + 100);
-    const nameInput = document.getElementById('userNameInput');
-    nameInput.value = defaultName;
+    let clientId = localStorage.getItem('antigravity_persistent_client_id');
+    if (!clientId) {
+      clientId = 'user_' + Math.random().toString(36).substring(2, 8);
+      localStorage.setItem('antigravity_persistent_client_id', clientId);
+    }
 
-    // Connect to HiveMQ Cloud WebSocket Relay
-    const mqttTopic = `antigravity_tracker_v2/${roomId}`;
+    const savedName = localStorage.getItem('antigravity_participant_name') || ('Friend ' + Math.floor(Math.random() * 900 + 100));
+    const nameInput = document.getElementById('userNameInput');
+    nameInput.value = savedName;
+
+    const mqttTopic = `antigravity_tracker_v3/${roomId}/${clientId}`;
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-      clientId: 'sender_' + clientId,
+      clientId: 'sender_' + clientId + '_' + Math.random().toString(36).substring(2, 5),
       clean: true,
       reconnectPeriod: 2000
     });
 
     let watchId = null;
 
-    // Main GPS Activation Function
     function activateGPS() {
-      const name = nameInput.value.trim() || defaultName;
+      const name = nameInput.value.trim() || savedName;
+      localStorage.setItem('antigravity_participant_name', name);
       
       document.getElementById('statusTitle').innerText = "Requesting GPS Access...";
       document.getElementById('statusSubtitle').innerText = "Please tap 'Allow' when your phone asks";
@@ -343,8 +337,8 @@
 
       document.getElementById('iconBox').className = 'icon-wrapper active';
       document.getElementById('statusDot').className = 'status-indicator live';
-      document.getElementById('statusTitle').innerText = "✓ Location Live & Connected!";
-      document.getElementById('statusSubtitle').innerText = `Syncing with Host Room (${roomId})`;
+      document.getElementById('statusTitle').innerText = "✓ Location Live & Saved on Host Map!";
+      document.getElementById('statusSubtitle').innerText = `Permanently connected to Host Room (${roomId})`;
       document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
       document.getElementById('btnText').innerText = "✓ Location Active & Sharing";
 
@@ -373,10 +367,10 @@
       const jsonStr = JSON.stringify(payload);
 
       if (mqttClient && mqttClient.connected) {
-        mqttClient.publish(mqttTopic, jsonStr, { qos: 1 });
+        mqttClient.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
       } else {
         mqttClient.on('connect', () => {
-          mqttClient.publish(mqttTopic, jsonStr, { qos: 1 });
+          mqttClient.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
         });
       }
 
