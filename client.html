@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Location Check-In</title>
+  <title>Live Location Broadcaster (1s Updates)</title>
   
   <!-- Standalone HiveMQ Cloud MQTT Library -->
   <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
@@ -70,18 +70,19 @@
       justify-content: center;
       margin-bottom: 20px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
     }
 
     .icon-wrapper.active {
       background: rgba(16, 185, 129, 0.15);
       border-color: rgba(16, 185, 129, 0.4);
       color: #34d399;
-      animation: pulse-border 2s infinite;
+      animation: radar-pulse 1.2s infinite;
     }
 
-    @keyframes pulse-border {
-      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-      70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+    @keyframes radar-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+      70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
       100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
@@ -159,21 +160,25 @@
       box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3);
     }
 
-    .status-card {
+    .live-stream-panel {
       margin-top: 20px;
-      padding: 14px;
+      padding: 16px;
       background: #090d16;
       border: 1px solid #1f2937;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      border-radius: 16px;
       text-align: left;
     }
 
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
     .status-indicator {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       background: #eab308;
       flex-shrink: 0;
@@ -181,13 +186,13 @@
 
     .status-indicator.live {
       background: #10b981;
-      box-shadow: 0 0 10px #10b981;
-      animation: blink 1.5s infinite;
+      box-shadow: 0 0 12px #10b981;
+      animation: blink 1s infinite;
     }
 
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
     .status-info {
@@ -199,7 +204,31 @@
     .status-info b {
       display: block;
       color: #ffffff;
-      font-size: 13px;
+      font-size: 14px;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid #1e293b;
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    .telemetry-item {
+      background: #111827;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+    }
+    .telemetry-item span {
+      display: block;
+      color: #38bdf8;
+      font-size: 12px;
+      font-weight: bold;
     }
 
     .privacy-tag {
@@ -227,9 +256,9 @@
         </svg>
       </div>
 
-      <h1 id="mainHeading">Location Check-In</h1>
+      <h1 id="mainHeading">Live GPS Broadcaster</h1>
       <p id="mainDesc" class="desc">
-        Tap the button below to turn on your GPS. Your location will stay securely saved on the host's map.
+        Real-time GPS updates stream continuously every second to the host map.
       </p>
 
       <div class="input-box">
@@ -242,14 +271,36 @@
           <circle cx="12" cy="12" r="10"></circle>
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
         </svg>
-        <span id="btnText">Turn On GPS &amp; Share</span>
+        <span id="btnText">Turn On 1-Second Live GPS</span>
       </button>
 
-      <div class="status-card">
-        <div id="statusDot" class="status-indicator"></div>
-        <div class="status-info">
-          <b id="statusTitle">GPS Standby</b>
-          <span id="statusSubtitle">Waiting for location activation</span>
+      <!-- Live 1-Second Telemetry Status Panel -->
+      <div class="live-stream-panel">
+        <div class="status-row">
+          <div id="statusDot" class="status-indicator"></div>
+          <div class="status-info">
+            <b id="statusTitle">GPS Standby</b>
+            <span id="statusSubtitle">Waiting for location activation</span>
+          </div>
+        </div>
+
+        <div id="telemetryGrid" class="telemetry-grid" style="display: none;">
+          <div class="telemetry-item">
+            Updates Streamed:
+            <span id="statUpdatesCount">0</span>
+          </div>
+          <div class="telemetry-item">
+            Broadcast Rate:
+            <span id="statFrequency">1 per second (1Hz)</span>
+          </div>
+          <div class="telemetry-item">
+            GPS Accuracy:
+            <span id="statAccuracy">Acquiring...</span>
+          </div>
+          <div class="telemetry-item">
+            Live Speed:
+            <span id="statSpeed">0 km/h</span>
+          </div>
         </div>
       </div>
 
@@ -257,7 +308,7 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
         </svg>
-        <span>Private • Only shared with room host</span>
+        <span>Private • Securely sent only to room host</span>
       </div>
 
     </div>
@@ -284,83 +335,109 @@
       reconnectPeriod: 2000
     });
 
-    let watchId = null;
+    let liveIntervalId = null;
+    let watchPositionId = null;
+    let updatesCounter = 0;
+    let isLiveStreaming = false;
 
     function activateGPS() {
       const name = nameInput.value.trim() || savedName;
       localStorage.setItem('antigravity_participant_name', name);
       
       document.getElementById('statusTitle').innerText = "Requesting GPS Access...";
-      document.getElementById('statusSubtitle').innerText = "Please tap 'Allow' when your phone asks";
-      document.getElementById('btnText').innerText = "Locating GPS...";
+      document.getElementById('statusSubtitle').innerText = "Please tap 'Allow' on your phone";
+      document.getElementById('btnText').innerText = "Acquiring GPS Signal...";
 
       if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
         return;
       }
 
-      const options = {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 10000
-      };
-
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          handleSuccess(position, name);
+        (pos) => {
+          startLive1SecondBroadcaster(name);
         },
         (error) => {
           navigator.geolocation.getCurrentPosition(
-            (position2) => {
-              handleSuccess(position2, name);
+            (pos2) => {
+              startLive1SecondBroadcaster(name);
             },
             (error2) => {
               let msg = "Please allow location permission in your phone/browser settings.";
               if (error2.code === error2.PERMISSION_DENIED) {
-                msg = "Location permission denied. Please allow location in browser settings and tap the button again.";
+                msg = "Location permission denied. Please enable location in browser settings and tap again.";
               }
               showError(msg);
             },
             { enableHighAccuracy: false, timeout: 6000 }
           );
         },
-        options
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
       );
     }
 
-    function handleSuccess(position, name) {
+    function startLive1SecondBroadcaster(name) {
+      isLiveStreaming = true;
+      document.getElementById('iconBox').className = 'icon-wrapper active';
+      document.getElementById('statusDot').className = 'status-indicator live';
+      document.getElementById('statusTitle').innerText = "🟢 Streaming Live Location";
+      document.getElementById('statusSubtitle').innerText = `Updating every 1 second to Host (${roomId})`;
+      document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
+      document.getElementById('btnText').innerText = "✓ Live 1s Broadcaster Active";
+      document.getElementById('telemetryGrid').style.display = 'grid';
+
+      if (liveIntervalId) clearInterval(liveIntervalId);
+      if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
+
+      const pollGPS = () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            processAndBroadcast(pos, name);
+          },
+          (err) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos2) => processAndBroadcast(pos2, name),
+              null,
+              { enableHighAccuracy: false, maximumAge: 0, timeout: 1500 }
+            );
+          },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 }
+        );
+      };
+
+      pollGPS();
+      liveIntervalId = setInterval(pollGPS, 1000);
+
+      watchPositionId = navigator.geolocation.watchPosition(
+        (pos) => {
+          processAndBroadcast(pos, name);
+        },
+        null,
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 }
+      );
+    }
+
+    function processAndBroadcast(position, name) {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
       const accuracy = Math.round(position.coords.accuracy || 0);
+      const speed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
 
-      broadcastLocation(name, lat, lng, accuracy);
+      updatesCounter++;
 
-      document.getElementById('iconBox').className = 'icon-wrapper active';
-      document.getElementById('statusDot').className = 'status-indicator live';
-      document.getElementById('statusTitle').innerText = "✓ Location Live & Saved on Host Map!";
-      document.getElementById('statusSubtitle').innerText = `Permanently connected to Host Room (${roomId})`;
-      document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
-      document.getElementById('btnText').innerText = "✓ Location Active & Sharing";
+      document.getElementById('statUpdatesCount').innerText = `${updatesCounter} updates`;
+      document.getElementById('statAccuracy').innerText = `±${accuracy}m`;
+      document.getElementById('statSpeed').innerText = `${speed} km/h`;
 
-      if (!watchId) {
-        watchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            broadcastLocation(name, pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
-          },
-          null,
-          { enableHighAccuracy: true, maximumAge: 5000 }
-        );
-      }
-    }
-
-    function broadcastLocation(name, lat, lng, accuracy) {
       const payload = {
         id: clientId,
         name: name,
         lat: lat,
         lng: lng,
         accuracy: accuracy,
+        speed: speed,
         room: roomId,
+        updateIndex: updatesCounter,
         timestamp: new Date().toLocaleTimeString()
       };
 
