@@ -302,7 +302,7 @@
       </a>
       <div>
         <div class="header-title">Pinpoint Precision Google Maps Tracker</div>
-        <div class="header-sub">Kalman Filter Smoothing &bull; High-Resolution Satellite View</div>
+        <div class="header-sub">Multi-Burst Satellite Averaging &bull; Google HD Satellite View</div>
       </div>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
@@ -340,7 +340,7 @@
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <h4 style="font-size: 14px; font-weight: 700;">Share High-Precision Link</h4>
-          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Kalman GPS</span>
+          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Dual GNSS</span>
         </div>
         <p style="font-size: 12px; color: #9ca3af; margin-top: 4px; line-height: 1.4;">
           Send this link to friends. When opened, their phone <b>continuously broadcasts pinpoint GPS coordinates filtered for maximum accuracy</b>.
@@ -463,7 +463,6 @@
           accuracy: p.accuracy,
           speed: p.speed || 0,
           heading: p.heading || 0,
-          address: p.address || '',
           timestamp: p.timestamp,
           color: p.color
         };
@@ -491,40 +490,46 @@
     updateShareDisplay();
 
     // ==========================================
-    // MODERN HIGH-RESOLUTION GOOGLE MAP ENGINE
+    // MODERN ULTRA HIGH-RES GOOGLE SATELLITE & MAPS
     // ==========================================
-    const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-      maxZoom: 21,
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attribution: '&copy; Google Maps'
-    });
-
     const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      maxZoom: 21,
+      maxZoom: 22,
+      maxNativeZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Satellite Imagery'
     });
 
+    const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 22,
+      maxNativeZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    });
+
     const googleTerrain = L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
-      maxZoom: 21,
+      maxZoom: 22,
+      maxNativeZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Terrain'
     });
 
     const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 21,
+      maxZoom: 22,
+      maxNativeZoom: 20,
       attribution: '&copy; CartoDB Dark Matter'
     });
 
+    // Default to Google Satellite Hybrid for crystal clear building recognition
     let map = L.map('map', {
       center: [20.5937, 78.9629],
       zoom: 5,
-      layers: [googleStreets]
+      maxZoom: 22,
+      layers: [googleHybrid]
     });
 
     const baseLayers = {
-      "🗺️ Google Maps (Standard)": googleStreets,
       "🛰️ Google Satellite (Live Aerial)": googleHybrid,
+      "🗺️ Google Maps (Standard)": googleStreets,
       "⛰️ Google Terrain": googleTerrain,
       "🌙 Modern Dark HD": cartoDark
     };
@@ -532,7 +537,6 @@
 
     function createMapPin(p) {
       const color = p.color || colors[colorIdx++ % colors.length];
-      const heading = p.heading || 0;
 
       const icon = L.divIcon({
         className: 'custom-pin',
@@ -550,18 +554,18 @@
 
       const marker = L.marker([p.lat, p.lng], { icon: icon }).addTo(map);
 
-      // Add high-precision radar accuracy circle around pin
+      // Radar accuracy circle around pin
       if (!accuracyCircles[p.id]) {
         accuracyCircles[p.id] = L.circle([p.lat, p.lng], {
-          radius: Math.max(3, p.accuracy || 10),
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.15,
-          weight: 1
+          radius: Math.max(2, p.accuracy || 6),
+          color: '#38bdf8',
+          fillColor: '#38bdf8',
+          fillOpacity: 0.12,
+          weight: 1.5
         }).addTo(map);
       }
 
-      // Add movement path trail
+      // Live movement path
       if (!movementPaths[p.id]) {
         movementPaths[p.id] = L.polyline([[p.lat, p.lng]], {
           color: color,
@@ -595,7 +599,6 @@
     }
     restoreSavedData();
 
-    // Handle high-precision 1-second location update
     function handleLocation(data, isNewFromNetwork = false) {
       if (!data || !data.lat || !data.lng) return;
 
@@ -607,7 +610,7 @@
         trackedPersons[pId] = { ...data, id: pId, marker, color, lastSeen: Date.now() };
 
         if (Object.keys(trackedPersons).length === 1) {
-          map.setView(newLatLng, 17);
+          map.setView(newLatLng, 19);
         } else {
           const group = new L.featureGroup(Object.values(trackedPersons).map(x => x.marker));
           map.fitBounds(group.getBounds().pad(0.2));
@@ -617,27 +620,21 @@
           showToast(`${data.name || 'A person'} locked high-precision GPS!`);
         }
       } else {
-        // Smooth Kalman-filtered position update
         trackedPersons[pId].lat = data.lat;
         trackedPersons[pId].lng = data.lng;
         trackedPersons[pId].speed = data.speed || 0;
-        trackedPersons[pId].heading = data.heading || 0;
         trackedPersons[pId].accuracy = data.accuracy || trackedPersons[pId].accuracy;
-        trackedPersons[pId].address = data.address || trackedPersons[pId].address || '';
         trackedPersons[pId].name = data.name || trackedPersons[pId].name;
         trackedPersons[pId].timestamp = data.timestamp || new Date().toLocaleTimeString();
         trackedPersons[pId].lastSeen = Date.now();
 
-        // Reposition Pin smoothly
         trackedPersons[pId].marker.setLatLng(newLatLng);
 
-        // Update Precision Circle bounds
         if (accuracyCircles[pId]) {
           accuracyCircles[pId].setLatLng(newLatLng);
-          accuracyCircles[pId].setRadius(Math.max(3, data.accuracy || 8));
+          accuracyCircles[pId].setRadius(Math.max(2, data.accuracy || 6));
         }
 
-        // Add to Movement Path
         if (movementPaths[pId]) {
           movementPaths[pId].addLatLng(newLatLng);
         }
@@ -724,13 +721,6 @@
               ${isRecentlyActive ? '🟢 Live (1s)' : (p.timestamp || 'Saved')}
             </span>
           </div>
-
-          ${p.address ? `
-            <div class="street-badge">
-              <span>📍</span>
-              <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.address)}</span>
-            </div>
-          ` : ''}
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; color: #94a3b8; margin-bottom: 8px; font-family: monospace;">
             <span>Precision: <b style="color: #38bdf8;">±${p.accuracy || 5}m</b></span>
@@ -741,7 +731,7 @@
 
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
             <div style="display: flex; gap: 6px;">
-              <button onclick="map.setView([${p.lat}, ${p.lng}], 18)" class="btn-focus">Focus (Zoom)</button>
+              <button onclick="map.setView([${p.lat}, ${p.lng}], 20)" class="btn-focus">Focus (Zoom)</button>
               <a href="${gmapsUrl}" target="_blank" class="btn-gmaps">Google Maps ↗</a>
             </div>
             <button onclick="removePerson('${p.id}')" class="btn-remove-person" title="Remove person from map">

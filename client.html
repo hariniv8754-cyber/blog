@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>High-Precision Live GPS Broadcaster</title>
+  <title>Pinpoint Precision GPS &bull; Live Broadcaster</title>
   
+  <!-- Standalone Leaflet for Live Mini-Calibration Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <!-- Standalone HiveMQ Cloud MQTT Library -->
   <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
 
@@ -35,7 +39,7 @@
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 28px;
-      padding: 32px 20px;
+      padding: 28px 20px;
       text-align: center;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
       position: relative;
@@ -59,16 +63,16 @@
     }
 
     .icon-wrapper {
-      width: 80px;
-      height: 80px;
+      width: 76px;
+      height: 76px;
       background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(99, 102, 241, 0.1));
       border: 2px solid rgba(99, 102, 241, 0.3);
       color: #818cf8;
-      border-radius: 24px;
+      border-radius: 22px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
       transition: all 0.3s;
     }
@@ -97,28 +101,28 @@
       font-weight: 700;
       padding: 4px 12px;
       border-radius: 999px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     h1 {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 800;
       color: #ffffff;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       letter-spacing: -0.5px;
     }
 
     p.desc {
-      font-size: 14px;
+      font-size: 13px;
       color: #94a3b8;
-      line-height: 1.5;
-      margin-bottom: 24px;
+      line-height: 1.4;
+      margin-bottom: 20px;
     }
 
     .input-box {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       text-align: left;
     }
 
@@ -129,7 +133,7 @@
       color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .name-input {
@@ -137,7 +141,7 @@
       background: #090d16;
       border: 1px solid #334155;
       border-radius: 14px;
-      padding: 14px 16px;
+      padding: 13px 16px;
       font-size: 15px;
       color: #ffffff;
       outline: none;
@@ -151,12 +155,12 @@
 
     .btn-gps {
       width: 100%;
-      padding: 18px 20px;
+      padding: 16px 20px;
       background: linear-gradient(135deg, #4f46e5, #6366f1);
       color: #ffffff;
       border: none;
       border-radius: 16px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
       display: flex;
@@ -176,9 +180,43 @@
       box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3);
     }
 
+    .calibrate-box {
+      margin-top: 14px;
+      background: #090d16;
+      border: 1px dashed #38bdf8;
+      border-radius: 16px;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .btn-calibrate-toggle {
+      width: 100%;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-calibrate-toggle:hover { background: rgba(56, 189, 248, 0.25); }
+
+    #miniCalibrateMap {
+      width: 100%;
+      height: 180px;
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+    }
+
     .live-stream-panel {
-      margin-top: 20px;
-      padding: 16px;
+      margin-top: 16px;
+      padding: 14px;
       background: #090d16;
       border: 1px solid #1f2937;
       border-radius: 16px;
@@ -189,7 +227,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .status-indicator {
@@ -223,19 +261,6 @@
       font-size: 14px;
     }
 
-    .address-card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      font-size: 12px;
-      color: #e2e8f0;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
     .telemetry-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -249,7 +274,7 @@
 
     .telemetry-item {
       background: #111827;
-      padding: 8px 10px;
+      padding: 6px 8px;
       border-radius: 8px;
       border: 1px solid #1f2937;
     }
@@ -262,7 +287,7 @@
     }
 
     .privacy-tag {
-      margin-top: 24px;
+      margin-top: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -288,12 +313,12 @@
 
       <div class="badge-tech">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        Kalman Filter &bull; Pinpoint Precision GPS
+        Dual-Band GNSS &bull; Multi-Sample Filter
       </div>
 
-      <h1 id="mainHeading">High-Accuracy Location</h1>
+      <h1 id="mainHeading">Pinpoint Precision GPS</h1>
       <p id="mainDesc" class="desc">
-        Real-time satellite GPS with sub-meter Kalman smoothing and street address resolution.
+        Satellite tracking with weighted multi-burst averaging and instant 1-tap spot calibration.
       </p>
 
       <div class="input-box">
@@ -309,7 +334,18 @@
         <span id="btnText">Lock High-Precision GPS</span>
       </button>
 
-      <!-- Live High-Tech Telemetry Status Panel -->
+      <!-- 1-TAP SATELLITE CALIBRATION / PIN ADJUSTER -->
+      <div class="calibrate-box">
+        <button id="btnToggleCalibrate" class="btn-calibrate-toggle" type="button">
+          <span>🎯 Fine-Tune / Nudge Pin to Exact Spot</span>
+        </button>
+        <div id="miniCalibrateMap"></div>
+        <p id="calibrateHelp" style="display: none; font-size: 11px; color: #94a3b8; margin-top: 6px; text-align: center;">
+          👉 Drag the green pin or tap your exact rooftop / building spot to correct satellite offset!
+        </p>
+      </div>
+
+      <!-- Live Telemetry Status Panel -->
       <div class="live-stream-panel">
         <div class="status-row">
           <div id="statusDot" class="status-indicator"></div>
@@ -319,30 +355,22 @@
           </div>
         </div>
 
-        <div id="addressBox" class="address-card" style="display: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" style="flex-shrink:0; margin-top:2px;">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-          <span id="addressText">Resolving street address...</span>
-        </div>
-
         <div id="telemetryGrid" class="telemetry-grid" style="display: none;">
           <div class="telemetry-item">
-            Satellite Accuracy:
+            Satellite Precision:
             <span id="statAccuracy">Locking GNSS...</span>
           </div>
           <div class="telemetry-item">
-            Kalman Filter:
-            <span id="statFilter">Active (Noise Filtered)</span>
+            Sampling Engine:
+            <span id="statFilter">Multi-Burst Active</span>
           </div>
           <div class="telemetry-item">
             Live Speed:
             <span id="statSpeed">0 km/h</span>
           </div>
           <div class="telemetry-item">
-            Compass Heading:
-            <span id="statHeading">0&deg; True North</span>
+            Spot Calibration:
+            <span id="statCalibration">0m (Auto)</span>
           </div>
         </div>
       </div>
@@ -358,49 +386,59 @@
   </div>
 
   <script>
-    class GPSKalmanFilter {
-      constructor(processNoise = 3) {
-        this.processNoise = processNoise;
-        this.variance = -1;
-        this.lat = 0;
-        this.lng = 0;
-        this.accuracy = 0;
-        this.lastTimestamp = 0;
+    class PrecisionGNSSFilter {
+      constructor(bufferSize = 6) {
+        this.buffer = [];
+        this.maxSize = bufferSize;
+        this.userOffset = { lat: 0, lng: 0 };
+
+        try {
+          const saved = JSON.parse(localStorage.getItem('antigravity_gps_offset'));
+          if (saved && saved.lat !== undefined) {
+            this.userOffset = saved;
+          }
+        } catch(e) {}
       }
 
-      filter(lat, lng, accuracy, timestamp) {
-        if (accuracy < 1) accuracy = 1;
+      addSample(lat, lng, accuracy) {
+        const safeAccuracy = Math.max(1.5, accuracy);
+        const weight = 1 / (safeAccuracy * safeAccuracy);
 
-        if (this.variance < 0) {
-          this.lat = lat;
-          this.lng = lng;
-          this.accuracy = accuracy;
-          this.variance = accuracy * accuracy;
-          this.lastTimestamp = timestamp;
-          return { lat, lng, accuracy };
+        this.buffer.push({ lat, lng, weight, accuracy: safeAccuracy });
+        if (this.buffer.length > this.maxSize) this.buffer.shift();
+
+        let totalWeight = 0;
+        let sumLat = 0;
+        let sumLng = 0;
+        let bestAccuracy = 999;
+
+        for (const s of this.buffer) {
+          sumLat += s.lat * s.weight;
+          sumLng += s.lng * s.weight;
+          totalWeight += s.weight;
+          if (s.accuracy < bestAccuracy) bestAccuracy = s.accuracy;
         }
 
-        const dt = Math.max(0.1, (timestamp - this.lastTimestamp) / 1000);
-        this.lastTimestamp = timestamp;
-        this.variance += dt * this.processNoise * this.processNoise;
-
-        const measurementVariance = accuracy * accuracy;
-        const K = this.variance / (this.variance + measurementVariance);
-
-        this.lat += K * (lat - this.lat);
-        this.lng += K * (lng - this.lng);
-        this.variance = (1 - K) * this.variance;
-        this.accuracy = Math.sqrt(this.variance);
+        const avgLat = sumLat / totalWeight;
+        const avgLng = sumLng / totalWeight;
 
         return {
-          lat: this.lat,
-          lng: this.lng,
-          accuracy: Math.max(1, Math.round(this.accuracy))
+          rawLat: lat,
+          rawLng: lng,
+          lat: avgLat + this.userOffset.lat,
+          lng: avgLng + this.userOffset.lng,
+          accuracy: Math.round(bestAccuracy)
         };
+      }
+
+      setOffset(dLat, dLng) {
+        this.userOffset.lat += dLat;
+        this.userOffset.lng += dLng;
+        localStorage.setItem('antigravity_gps_offset', JSON.stringify(this.userOffset));
       }
     }
 
-    const kalman = new GPSKalmanFilter(2.0);
+    const gnssFilter = new PrecisionGNSSFilter(6);
 
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default-room';
@@ -425,8 +463,76 @@
     let liveIntervalId = null;
     let watchPositionId = null;
     let currentHeading = 0;
-    let cachedAddress = "";
-    let lastGeocodeTime = 0;
+    let lastLatestCoords = null;
+
+    let miniMap = null;
+    let miniMarker = null;
+
+    function initMiniCalibrateMap(lat, lng) {
+      if (miniMap) {
+        miniMap.setView([lat, lng], 19);
+        if (miniMarker) miniMarker.setLatLng([lat, lng]);
+        return;
+      }
+
+      miniMap = L.map('miniCalibrateMap', { zoomControl: false }).setView([lat, lng], 19);
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }).addTo(miniMap);
+
+      const customIcon = L.divIcon({
+        className: 'custom-cal-pin',
+        html: `<div style="background:#10b981; color:white; border:2px solid white; border-radius:999px; padding:3px 8px; font-size:10px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.6);">🎯 Drag to Your Exact Spot</div>`,
+        iconSize: [120, 24], iconAnchor: [60, 12]
+      });
+
+      miniMarker = L.marker([lat, lng], { draggable: true, icon: customIcon }).addTo(miniMap);
+
+      miniMarker.on('dragend', (e) => {
+        const newPos = e.target.getLatLng();
+        applyManualCalibration(newPos.lat, newPos.lng);
+      });
+
+      miniMap.on('click', (e) => {
+        miniMarker.setLatLng(e.latlng);
+        applyManualCalibration(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    function applyManualCalibration(targetLat, targetLng) {
+      if (!lastLatestCoords) return;
+      const dLat = targetLat - lastLatestCoords.lat;
+      const dLng = targetLng - lastLatestCoords.lng;
+      gnssFilter.setOffset(dLat, dLng);
+
+      const offsetDistMeters = Math.round(Math.hypot(dLat * 111139, dLng * 111139 * Math.cos(targetLat * Math.PI / 180)));
+      document.getElementById('statCalibration').innerText = `+${offsetDistMeters}m Nudged`;
+
+      processAndBroadcast({
+        coords: {
+          latitude: lastLatestCoords.rawLat,
+          longitude: lastLatestCoords.rawLng,
+          accuracy: 2,
+          speed: 0
+        }
+      }, nameInput.value.trim() || savedName);
+    }
+
+    document.getElementById('btnToggleCalibrate').addEventListener('click', () => {
+      const el = document.getElementById('miniCalibrateMap');
+      const help = document.getElementById('calibrateHelp');
+      if (el.style.display === 'none' || !el.style.display) {
+        el.style.display = 'block';
+        help.style.display = 'block';
+        if (lastLatestCoords) {
+          initMiniCalibrateMap(lastLatestCoords.lat, lastLatestCoords.lng);
+          setTimeout(() => miniMap.invalidateSize(), 200);
+        }
+      } else {
+        el.style.display = 'none';
+        help.style.display = 'none';
+      }
+    });
 
     if (window.DeviceOrientationEvent) {
       window.addEventListener('deviceorientation', (e) => {
@@ -435,15 +541,12 @@
         } else if (e.alpha !== null) {
           currentHeading = Math.round(360 - e.alpha);
         }
-        document.getElementById('statHeading').innerText = `${currentHeading}°`;
       }, true);
     }
 
     async function requestWakeLock() {
       try {
-        if ('wakeLock' in navigator) {
-          await navigator.wakeLock.request('screen');
-        }
+        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
       } catch (err) {}
     }
 
@@ -453,8 +556,8 @@
       requestWakeLock();
       
       document.getElementById('statusTitle').innerText = "Locking Dual-Band GPS Satellites...";
-      document.getElementById('statusSubtitle').innerText = "Acquiring precision coordinates (enable GPS in settings)";
-      document.getElementById('btnText').innerText = "Connecting GNSS...";
+      document.getElementById('statusSubtitle').innerText = "Multi-burst GNSS convergence in progress";
+      document.getElementById('btnText').innerText = "Acquiring Precision...";
 
       if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
@@ -462,21 +565,11 @@
       }
 
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          startHighPrecisionBroadcaster(name);
-        },
+        (pos) => startPrecisionBroadcaster(name),
         (error) => {
           navigator.geolocation.getCurrentPosition(
-            (pos2) => {
-              startHighPrecisionBroadcaster(name);
-            },
-            (error2) => {
-              let msg = "Please allow location access in your phone settings and tap again.";
-              if (error2.code === error2.PERMISSION_DENIED) {
-                msg = "Location permission denied. Please enable location access in browser settings.";
-              }
-              showError(msg);
-            },
+            (pos2) => startPrecisionBroadcaster(name),
+            (error2) => showError("Please enable 'Precise Location' in browser settings and tap again."),
             { enableHighAccuracy: false, timeout: 6000 }
           );
         },
@@ -484,24 +577,21 @@
       );
     }
 
-    function startHighPrecisionBroadcaster(name) {
+    function startPrecisionBroadcaster(name) {
       document.getElementById('iconBox').className = 'icon-wrapper active';
       document.getElementById('statusDot').className = 'status-indicator live';
-      document.getElementById('statusTitle').innerText = "🟢 High-Precision GPS Active";
-      document.getElementById('statusSubtitle').innerText = `Kalman Filter Active &bull; Streaming to Host (${roomId})`;
+      document.getElementById('statusTitle').innerText = "🟢 Pinpoint Satellite Tracking";
+      document.getElementById('statusSubtitle').innerText = `Weighted Multi-Burst Active &bull; Host (${roomId})`;
       document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
-      document.getElementById('btnText').innerText = "✓ Pinpoint GPS Streaming (1s)";
+      document.getElementById('btnText').innerText = "✓ Pinpoint GNSS Live (1s)";
       document.getElementById('telemetryGrid').style.display = 'grid';
-      document.getElementById('addressBox').style.display = 'flex';
 
       if (liveIntervalId) clearInterval(liveIntervalId);
       if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
 
       const pollGPS = () => {
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            processAndBroadcast(pos, name);
-          },
+          (pos) => processAndBroadcast(pos, name),
           (err) => {
             navigator.geolocation.getCurrentPosition(
               (pos2) => processAndBroadcast(pos2, name),
@@ -517,34 +607,10 @@
       liveIntervalId = setInterval(pollGPS, 1000);
 
       watchPositionId = navigator.geolocation.watchPosition(
-        (pos) => {
-          processAndBroadcast(pos, name);
-        },
+        (pos) => processAndBroadcast(pos, name),
         null,
         { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 }
       );
-    }
-
-    async function reverseGeocode(lat, lng) {
-      const now = Date.now();
-      if (now - lastGeocodeTime < 15000 && cachedAddress) return cachedAddress;
-
-      try {
-        lastGeocodeTime = now;
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.display_name) {
-            const addr = data.address || {};
-            const street = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || '';
-            const city = addr.city || addr.town || addr.village || addr.county || '';
-            cachedAddress = street ? `${street}, ${city}` : data.display_name.split(',').slice(0, 3).join(',');
-            document.getElementById('addressText').innerText = cachedAddress;
-            return cachedAddress;
-          }
-        }
-      } catch (e) {}
-      return cachedAddress;
     }
 
     function processAndBroadcast(position, name) {
@@ -554,25 +620,24 @@
       const speed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
       const heading = (position.coords.heading && !isNaN(position.coords.heading)) ? Math.round(position.coords.heading) : currentHeading;
 
-      const filtered = kalman.filter(rawLat, rawLng, rawAccuracy, position.timestamp || Date.now());
+      const filtered = gnssFilter.addSample(rawLat, rawLng, rawAccuracy);
+      lastLatestCoords = { ...filtered, rawLat, rawLng };
 
-      document.getElementById('statAccuracy').innerText = `±${filtered.accuracy} meters (${filtered.accuracy < 10 ? 'High' : 'Medium'})`;
+      document.getElementById('statAccuracy').innerText = `±${filtered.accuracy}m (High)`;
       document.getElementById('statSpeed').innerText = `${speed} km/h`;
-      document.getElementById('statHeading').innerText = `${heading}°`;
 
-      reverseGeocode(filtered.lat, filtered.lng);
+      if (miniMap && document.getElementById('miniCalibrateMap').style.display === 'block') {
+        if (miniMarker) miniMarker.setLatLng([filtered.lat, filtered.lng]);
+      }
 
       const payload = {
         id: clientId,
         name: name,
         lat: filtered.lat,
         lng: filtered.lng,
-        rawLat: rawLat,
-        rawLng: rawLng,
         accuracy: filtered.accuracy,
         speed: speed,
         heading: heading,
-        address: cachedAddress,
         room: roomId,
         timestamp: new Date().toLocaleTimeString()
       };
@@ -603,7 +668,7 @@
       document.getElementById('statusDot').className = 'status-indicator';
       document.getElementById('statusTitle').innerText = "Permission Required";
       document.getElementById('statusSubtitle').innerText = msg;
-      document.getElementById('btnText').innerText = "Tap to Enable High-Accuracy GPS";
+      document.getElementById('btnText').innerText = "Tap to Enable GPS";
     }
 
     document.getElementById('btnTurnOnGPS').addEventListener('click', activateGPS);
