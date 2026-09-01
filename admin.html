@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Live Map - Real-Time Multi-Person Tracker</title>
+  <title>Admin Live Map - Modern Google Maps Multi-Person Tracker</title>
   
   <!-- Authentication Guard -->
   <script>
@@ -113,6 +113,24 @@
       min-height: 520px;
       border-radius: 12px;
       z-index: 10;
+    }
+
+    /* Modern Map Controls Theme */
+    .leaflet-control-layers {
+      background: #111827 !important;
+      border: 1px solid #374151 !important;
+      border-radius: 10px !important;
+      color: #f1f5f9 !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+    }
+    .leaflet-control-layers-base label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      cursor: pointer;
     }
 
     .sidebar { display: flex; flex-direction: column; gap: 16px; }
@@ -271,8 +289,8 @@
         <span>Back to Rooms</span>
       </a>
       <div>
-        <div class="header-title">Live 1-Second GPS Tracking Map</div>
-        <div class="header-sub">Real-Time Movement Stream • Only you view this map</div>
+        <div class="header-title">Live Modern Google Maps Tracker</div>
+        <div class="header-sub">High-Resolution Google Maps &amp; Satellite View • 1s Live Stream</div>
       </div>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
@@ -293,9 +311,9 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <h3 style="font-size: 15px; font-weight: 700;">Live Multi-Person Map</h3>
+          <h3 style="font-size: 15px; font-weight: 700;">Google Maps Multi-Person View</h3>
           <span style="font-size: 11px; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 999px; font-weight: bold;">
-            <span class="live-beacon"></span> 1s Real-Time Updates
+            <span class="live-beacon"></span> 1s Live GPS
           </span>
         </div>
         <span id="countBadge" style="font-size: 12px; color: #10b981; font-weight: 600;">0 Active Persons</span>
@@ -409,7 +427,7 @@
 
     let qrInstance = null;
     const trackedPersons = {};
-    const movementPaths = {}; // Stores polyline history for each person
+    const movementPaths = {};
     const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
     let colorIdx = 0;
 
@@ -457,11 +475,53 @@
     }
     updateShareDisplay();
 
-    // Initialize Leaflet Map
-    let map = L.map('map').setView([20.5937, 78.9629], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap', maxZoom: 19
-    }).addTo(map);
+    // ==========================================
+    // MODERN MAP ENGINE: GOOGLE MAPS & SATELLITE
+    // ==========================================
+    const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    });
+
+    const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Satellite Imagery'
+    });
+
+    const googleTerrain = L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Terrain'
+    });
+
+    const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      attribution: '&copy; CartoDB Dark Matter'
+    });
+
+    const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      attribution: '&copy; CartoDB Voyager HD'
+    });
+
+    // Initialize Map with Google Maps as default
+    let map = L.map('map', {
+      center: [20.5937, 78.9629],
+      zoom: 5,
+      layers: [googleStreets]
+    });
+
+    // Add Interactive Modern Map Layer Switcher
+    const baseLayers = {
+      "🗺️ Google Maps (Standard)": googleStreets,
+      "🛰️ Google Satellite (Live Aerial)": googleHybrid,
+      "⛰️ Google Terrain": googleTerrain,
+      "🌙 Modern Dark HD": cartoDark,
+      "🏙️ Carto Voyager HD": cartoVoyager
+    };
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
     function createMapPin(p) {
       const color = p.color || colors[colorIdx++ % colors.length];
@@ -481,12 +541,11 @@
 
       const marker = L.marker([p.lat, p.lng], { icon: icon }).addTo(map);
 
-      // Create live movement trail path
       if (!movementPaths[p.id]) {
         movementPaths[p.id] = L.polyline([[p.lat, p.lng]], {
           color: color,
           weight: 4,
-          opacity: 0.8,
+          opacity: 0.85,
           dashArray: '6, 6'
         }).addTo(map);
       }
@@ -515,7 +574,6 @@
     }
     restoreSavedData();
 
-    // Handle incoming live location stream (Triggered every 1 second)
     function handleLocation(data, isNewFromNetwork = false) {
       if (!data || !data.lat || !data.lng) return;
 
@@ -537,7 +595,6 @@
           showToast(`${data.name || 'A person'} started live 1s streaming!`);
         }
       } else {
-        // Continuous 1-Second Smooth Repositioning
         trackedPersons[pId].lat = data.lat;
         trackedPersons[pId].lng = data.lng;
         trackedPersons[pId].speed = data.speed || 0;
@@ -546,10 +603,8 @@
         trackedPersons[pId].timestamp = data.timestamp || new Date().toLocaleTimeString();
         trackedPersons[pId].lastSeen = Date.now();
 
-        // Smoothly move marker to new GPS coordinate
         trackedPersons[pId].marker.setLatLng(newLatLng);
 
-        // Append to live movement trail path
         if (movementPaths[pId]) {
           movementPaths[pId].addLatLng(newLatLng);
         }
