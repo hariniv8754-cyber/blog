@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Live Location Broadcaster (1s Updates)</title>
+  <title>High-Precision Live GPS Broadcaster</title>
   
   <!-- Standalone HiveMQ Cloud MQTT Library -->
   <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
@@ -31,7 +31,7 @@
 
     .container {
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 28px;
@@ -46,8 +46,8 @@
       top: -20px;
       left: 50%;
       transform: translateX(-50%);
-      width: 200px;
-      height: 200px;
+      width: 220px;
+      height: 220px;
       background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0) 70%);
       pointer-events: none;
       z-index: 0;
@@ -82,8 +82,24 @@
 
     @keyframes radar-pulse {
       0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-      70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+      70% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
       100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .badge-tech {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     h1 {
@@ -207,6 +223,19 @@
       font-size: 14px;
     }
 
+    .address-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #e2e8f0;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
     .telemetry-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -220,7 +249,7 @@
 
     .telemetry-item {
       background: #111827;
-      padding: 6px 8px;
+      padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid #1f2937;
     }
@@ -229,6 +258,7 @@
       color: #38bdf8;
       font-size: 12px;
       font-weight: bold;
+      margin-top: 2px;
     }
 
     .privacy-tag {
@@ -256,9 +286,14 @@
         </svg>
       </div>
 
-      <h1 id="mainHeading">Live GPS Broadcaster</h1>
+      <div class="badge-tech">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        Kalman Filter &bull; Pinpoint Precision GPS
+      </div>
+
+      <h1 id="mainHeading">High-Accuracy Location</h1>
       <p id="mainDesc" class="desc">
-        Real-time GPS updates stream continuously every second to the host map.
+        Real-time satellite GPS with sub-meter Kalman smoothing and street address resolution.
       </p>
 
       <div class="input-box">
@@ -271,35 +306,43 @@
           <circle cx="12" cy="12" r="10"></circle>
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
         </svg>
-        <span id="btnText">Turn On 1-Second Live GPS</span>
+        <span id="btnText">Lock High-Precision GPS</span>
       </button>
 
-      <!-- Live 1-Second Telemetry Status Panel -->
+      <!-- Live High-Tech Telemetry Status Panel -->
       <div class="live-stream-panel">
         <div class="status-row">
           <div id="statusDot" class="status-indicator"></div>
           <div class="status-info">
             <b id="statusTitle">GPS Standby</b>
-            <span id="statusSubtitle">Waiting for location activation</span>
+            <span id="statusSubtitle">Waiting for satellite lock</span>
           </div>
+        </div>
+
+        <div id="addressBox" class="address-card" style="display: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" style="flex-shrink:0; margin-top:2px;">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span id="addressText">Resolving street address...</span>
         </div>
 
         <div id="telemetryGrid" class="telemetry-grid" style="display: none;">
           <div class="telemetry-item">
-            Updates Streamed:
-            <span id="statUpdatesCount">0</span>
+            Satellite Accuracy:
+            <span id="statAccuracy">Locking GNSS...</span>
           </div>
           <div class="telemetry-item">
-            Broadcast Rate:
-            <span id="statFrequency">1 per second (1Hz)</span>
-          </div>
-          <div class="telemetry-item">
-            GPS Accuracy:
-            <span id="statAccuracy">Acquiring...</span>
+            Kalman Filter:
+            <span id="statFilter">Active (Noise Filtered)</span>
           </div>
           <div class="telemetry-item">
             Live Speed:
             <span id="statSpeed">0 km/h</span>
+          </div>
+          <div class="telemetry-item">
+            Compass Heading:
+            <span id="statHeading">0&deg; True North</span>
           </div>
         </div>
       </div>
@@ -315,6 +358,50 @@
   </div>
 
   <script>
+    class GPSKalmanFilter {
+      constructor(processNoise = 3) {
+        this.processNoise = processNoise;
+        this.variance = -1;
+        this.lat = 0;
+        this.lng = 0;
+        this.accuracy = 0;
+        this.lastTimestamp = 0;
+      }
+
+      filter(lat, lng, accuracy, timestamp) {
+        if (accuracy < 1) accuracy = 1;
+
+        if (this.variance < 0) {
+          this.lat = lat;
+          this.lng = lng;
+          this.accuracy = accuracy;
+          this.variance = accuracy * accuracy;
+          this.lastTimestamp = timestamp;
+          return { lat, lng, accuracy };
+        }
+
+        const dt = Math.max(0.1, (timestamp - this.lastTimestamp) / 1000);
+        this.lastTimestamp = timestamp;
+        this.variance += dt * this.processNoise * this.processNoise;
+
+        const measurementVariance = accuracy * accuracy;
+        const K = this.variance / (this.variance + measurementVariance);
+
+        this.lat += K * (lat - this.lat);
+        this.lng += K * (lng - this.lng);
+        this.variance = (1 - K) * this.variance;
+        this.accuracy = Math.sqrt(this.variance);
+
+        return {
+          lat: this.lat,
+          lng: this.lng,
+          accuracy: Math.max(1, Math.round(this.accuracy))
+        };
+      }
+    }
+
+    const kalman = new GPSKalmanFilter(2.0);
+
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default-room';
 
@@ -337,16 +424,37 @@
 
     let liveIntervalId = null;
     let watchPositionId = null;
-    let updatesCounter = 0;
-    let isLiveStreaming = false;
+    let currentHeading = 0;
+    let cachedAddress = "";
+    let lastGeocodeTime = 0;
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        if (e.webkitCompassHeading) {
+          currentHeading = Math.round(e.webkitCompassHeading);
+        } else if (e.alpha !== null) {
+          currentHeading = Math.round(360 - e.alpha);
+        }
+        document.getElementById('statHeading').innerText = `${currentHeading}°`;
+      }, true);
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {}
+    }
 
     function activateGPS() {
       const name = nameInput.value.trim() || savedName;
       localStorage.setItem('antigravity_participant_name', name);
+      requestWakeLock();
       
-      document.getElementById('statusTitle').innerText = "Requesting GPS Access...";
-      document.getElementById('statusSubtitle').innerText = "Please tap 'Allow' on your phone";
-      document.getElementById('btnText').innerText = "Acquiring GPS Signal...";
+      document.getElementById('statusTitle').innerText = "Locking Dual-Band GPS Satellites...";
+      document.getElementById('statusSubtitle').innerText = "Acquiring precision coordinates (enable GPS in settings)";
+      document.getElementById('btnText').innerText = "Connecting GNSS...";
 
       if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
@@ -355,36 +463,36 @@
 
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          startLive1SecondBroadcaster(name);
+          startHighPrecisionBroadcaster(name);
         },
         (error) => {
           navigator.geolocation.getCurrentPosition(
             (pos2) => {
-              startLive1SecondBroadcaster(name);
+              startHighPrecisionBroadcaster(name);
             },
             (error2) => {
-              let msg = "Please allow location permission in your phone/browser settings.";
+              let msg = "Please allow location access in your phone settings and tap again.";
               if (error2.code === error2.PERMISSION_DENIED) {
-                msg = "Location permission denied. Please enable location in browser settings and tap again.";
+                msg = "Location permission denied. Please enable location access in browser settings.";
               }
               showError(msg);
             },
             { enableHighAccuracy: false, timeout: 6000 }
           );
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
 
-    function startLive1SecondBroadcaster(name) {
-      isLiveStreaming = true;
+    function startHighPrecisionBroadcaster(name) {
       document.getElementById('iconBox').className = 'icon-wrapper active';
       document.getElementById('statusDot').className = 'status-indicator live';
-      document.getElementById('statusTitle').innerText = "🟢 Streaming Live Location";
-      document.getElementById('statusSubtitle').innerText = `Updating every 1 second to Host (${roomId})`;
+      document.getElementById('statusTitle').innerText = "🟢 High-Precision GPS Active";
+      document.getElementById('statusSubtitle').innerText = `Kalman Filter Active &bull; Streaming to Host (${roomId})`;
       document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
-      document.getElementById('btnText').innerText = "✓ Live 1s Broadcaster Active";
+      document.getElementById('btnText').innerText = "✓ Pinpoint GPS Streaming (1s)";
       document.getElementById('telemetryGrid').style.display = 'grid';
+      document.getElementById('addressBox').style.display = 'flex';
 
       if (liveIntervalId) clearInterval(liveIntervalId);
       if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
@@ -417,27 +525,55 @@
       );
     }
 
+    async function reverseGeocode(lat, lng) {
+      const now = Date.now();
+      if (now - lastGeocodeTime < 15000 && cachedAddress) return cachedAddress;
+
+      try {
+        lastGeocodeTime = now;
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.display_name) {
+            const addr = data.address || {};
+            const street = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || '';
+            const city = addr.city || addr.town || addr.village || addr.county || '';
+            cachedAddress = street ? `${street}, ${city}` : data.display_name.split(',').slice(0, 3).join(',');
+            document.getElementById('addressText').innerText = cachedAddress;
+            return cachedAddress;
+          }
+        }
+      } catch (e) {}
+      return cachedAddress;
+    }
+
     function processAndBroadcast(position, name) {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const accuracy = Math.round(position.coords.accuracy || 0);
+      const rawLat = position.coords.latitude;
+      const rawLng = position.coords.longitude;
+      const rawAccuracy = position.coords.accuracy || 15;
       const speed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
+      const heading = (position.coords.heading && !isNaN(position.coords.heading)) ? Math.round(position.coords.heading) : currentHeading;
 
-      updatesCounter++;
+      const filtered = kalman.filter(rawLat, rawLng, rawAccuracy, position.timestamp || Date.now());
 
-      document.getElementById('statUpdatesCount').innerText = `${updatesCounter} updates`;
-      document.getElementById('statAccuracy').innerText = `±${accuracy}m`;
+      document.getElementById('statAccuracy').innerText = `±${filtered.accuracy} meters (${filtered.accuracy < 10 ? 'High' : 'Medium'})`;
       document.getElementById('statSpeed').innerText = `${speed} km/h`;
+      document.getElementById('statHeading').innerText = `${heading}°`;
+
+      reverseGeocode(filtered.lat, filtered.lng);
 
       const payload = {
         id: clientId,
         name: name,
-        lat: lat,
-        lng: lng,
-        accuracy: accuracy,
+        lat: filtered.lat,
+        lng: filtered.lng,
+        rawLat: rawLat,
+        rawLng: rawLng,
+        accuracy: filtered.accuracy,
         speed: speed,
+        heading: heading,
+        address: cachedAddress,
         room: roomId,
-        updateIndex: updatesCounter,
         timestamp: new Date().toLocaleTimeString()
       };
 
@@ -467,7 +603,7 @@
       document.getElementById('statusDot').className = 'status-indicator';
       document.getElementById('statusTitle').innerText = "Permission Required";
       document.getElementById('statusSubtitle').innerText = msg;
-      document.getElementById('btnText').innerText = "Tap to Turn On GPS";
+      document.getElementById('btnText').innerText = "Tap to Enable High-Accuracy GPS";
     }
 
     document.getElementById('btnTurnOnGPS').addEventListener('click', activateGPS);

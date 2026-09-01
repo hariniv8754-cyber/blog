@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Live Map - Modern Google Maps Multi-Person Tracker</title>
+  <title>Admin Live Map - High-Precision Google Maps Tracker</title>
   
   <!-- Authentication Guard -->
   <script>
@@ -115,7 +115,6 @@
       z-index: 10;
     }
 
-    /* Modern Map Controls Theme */
     .leaflet-control-layers {
       background: #111827 !important;
       border: 1px solid #374151 !important;
@@ -191,6 +190,19 @@
     }
     .person-card:hover { border-color: #4f46e5; }
     
+    .street-badge {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .btn-gmaps {
       display: inline-flex;
       align-items: center;
@@ -289,8 +301,8 @@
         <span>Back to Rooms</span>
       </a>
       <div>
-        <div class="header-title">Live Modern Google Maps Tracker</div>
-        <div class="header-sub">High-Resolution Google Maps &amp; Satellite View • 1s Live Stream</div>
+        <div class="header-title">Pinpoint Precision Google Maps Tracker</div>
+        <div class="header-sub">Kalman Filter Smoothing &bull; High-Resolution Satellite View</div>
       </div>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
@@ -311,9 +323,9 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <h3 style="font-size: 15px; font-weight: 700;">Google Maps Multi-Person View</h3>
-          <span style="font-size: 11px; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 999px; font-weight: bold;">
-            <span class="live-beacon"></span> 1s Live GPS
+          <h3 style="font-size: 15px; font-weight: 700;">Google Maps Precision View</h3>
+          <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 999px; font-weight: bold;">
+            <span class="live-beacon"></span> Pinpoint Accuracy
           </span>
         </div>
         <span id="countBadge" style="font-size: 12px; color: #10b981; font-weight: 600;">0 Active Persons</span>
@@ -327,11 +339,11 @@
       <!-- SHARE HYPERLINK BOX -->
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h4 style="font-size: 14px; font-weight: 700;">Share 1-Second Live Link</h4>
-          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Live Stream</span>
+          <h4 style="font-size: 14px; font-weight: 700;">Share High-Precision Link</h4>
+          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Kalman GPS</span>
         </div>
         <p style="font-size: 12px; color: #9ca3af; margin-top: 4px; line-height: 1.4;">
-          Send this link to friends. When opened, their phone <b>continuously broadcasts its live GPS location every single second</b> to your map.
+          Send this link to friends. When opened, their phone <b>continuously broadcasts pinpoint GPS coordinates filtered for maximum accuracy</b>.
         </p>
 
         <!-- Clickable Hyperlink Display -->
@@ -375,7 +387,7 @@
         </div>
       </div>
 
-      <!-- TRACKED PERSONS LIST (WITH REAL-TIME TELEMETRY) -->
+      <!-- TRACKED PERSONS LIST (WITH REAL-TIME TELEMETRY & STREET ADDRESS) -->
       <div class="card" style="flex: 1; max-height: 480px; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h4 style="font-size: 14px; font-weight: 700;">
@@ -388,7 +400,7 @@
         <div id="emptyList" style="text-align: center; padding: 36px 12px; color: #64748b; font-size: 13px;">
           <div style="font-size: 28px; margin-bottom: 8px;">👥</div>
           Waiting for people to click the link...<br>
-          <span style="font-size: 11px; color: #475569;">When opened, their live movement updates on your map every second.</span>
+          <span style="font-size: 11px; color: #475569;">When opened, their live pinpoint movement updates on your map every second.</span>
         </div>
 
         <div id="peopleList"></div>
@@ -428,6 +440,7 @@
     let qrInstance = null;
     const trackedPersons = {};
     const movementPaths = {};
+    const accuracyCircles = {};
     const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
     let colorIdx = 0;
 
@@ -449,6 +462,8 @@
           lng: parseFloat(p.lng),
           accuracy: p.accuracy,
           speed: p.speed || 0,
+          heading: p.heading || 0,
+          address: p.address || '',
           timestamp: p.timestamp,
           color: p.color
         };
@@ -458,7 +473,7 @@
 
     function buildShareUrl() {
       const pathSegments = window.location.pathname.split('/');
-      pathSegments.pop(); // Remove admin.html
+      pathSegments.pop();
       const dirPath = pathSegments.join('/').replace(/\/+$/, '');
       return `${window.location.origin}${dirPath}/share.html?room=${roomId}`;
     }
@@ -476,55 +491,49 @@
     updateShareDisplay();
 
     // ==========================================
-    // MODERN MAP ENGINE: GOOGLE MAPS & SATELLITE
+    // MODERN HIGH-RESOLUTION GOOGLE MAP ENGINE
     // ==========================================
     const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 21,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Maps'
     });
 
     const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 21,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Satellite Imagery'
     });
 
     const googleTerrain = L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 21,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Terrain'
     });
 
     const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20,
+      maxZoom: 21,
       attribution: '&copy; CartoDB Dark Matter'
     });
 
-    const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20,
-      attribution: '&copy; CartoDB Voyager HD'
-    });
-
-    // Initialize Map with Google Maps as default
     let map = L.map('map', {
       center: [20.5937, 78.9629],
       zoom: 5,
       layers: [googleStreets]
     });
 
-    // Add Interactive Modern Map Layer Switcher
     const baseLayers = {
       "🗺️ Google Maps (Standard)": googleStreets,
       "🛰️ Google Satellite (Live Aerial)": googleHybrid,
       "⛰️ Google Terrain": googleTerrain,
-      "🌙 Modern Dark HD": cartoDark,
-      "🏙️ Carto Voyager HD": cartoVoyager
+      "🌙 Modern Dark HD": cartoDark
     };
     L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
     function createMapPin(p) {
       const color = p.color || colors[colorIdx++ % colors.length];
+      const heading = p.heading || 0;
+
       const icon = L.divIcon({
         className: 'custom-pin',
         html: `
@@ -541,6 +550,18 @@
 
       const marker = L.marker([p.lat, p.lng], { icon: icon }).addTo(map);
 
+      // Add high-precision radar accuracy circle around pin
+      if (!accuracyCircles[p.id]) {
+        accuracyCircles[p.id] = L.circle([p.lat, p.lng], {
+          radius: Math.max(3, p.accuracy || 10),
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.15,
+          weight: 1
+        }).addTo(map);
+      }
+
+      // Add movement path trail
       if (!movementPaths[p.id]) {
         movementPaths[p.id] = L.polyline([[p.lat, p.lng]], {
           color: color,
@@ -574,6 +595,7 @@
     }
     restoreSavedData();
 
+    // Handle high-precision 1-second location update
     function handleLocation(data, isNewFromNetwork = false) {
       if (!data || !data.lat || !data.lng) return;
 
@@ -585,26 +607,37 @@
         trackedPersons[pId] = { ...data, id: pId, marker, color, lastSeen: Date.now() };
 
         if (Object.keys(trackedPersons).length === 1) {
-          map.setView(newLatLng, 16);
+          map.setView(newLatLng, 17);
         } else {
           const group = new L.featureGroup(Object.values(trackedPersons).map(x => x.marker));
           map.fitBounds(group.getBounds().pad(0.2));
         }
 
         if (isNewFromNetwork) {
-          showToast(`${data.name || 'A person'} started live 1s streaming!`);
+          showToast(`${data.name || 'A person'} locked high-precision GPS!`);
         }
       } else {
+        // Smooth Kalman-filtered position update
         trackedPersons[pId].lat = data.lat;
         trackedPersons[pId].lng = data.lng;
         trackedPersons[pId].speed = data.speed || 0;
+        trackedPersons[pId].heading = data.heading || 0;
         trackedPersons[pId].accuracy = data.accuracy || trackedPersons[pId].accuracy;
+        trackedPersons[pId].address = data.address || trackedPersons[pId].address || '';
         trackedPersons[pId].name = data.name || trackedPersons[pId].name;
         trackedPersons[pId].timestamp = data.timestamp || new Date().toLocaleTimeString();
         trackedPersons[pId].lastSeen = Date.now();
 
+        // Reposition Pin smoothly
         trackedPersons[pId].marker.setLatLng(newLatLng);
 
+        // Update Precision Circle bounds
+        if (accuracyCircles[pId]) {
+          accuracyCircles[pId].setLatLng(newLatLng);
+          accuracyCircles[pId].setRadius(Math.max(3, data.accuracy || 8));
+        }
+
+        // Add to Movement Path
         if (movementPaths[pId]) {
           movementPaths[pId].addLatLng(newLatLng);
         }
@@ -618,8 +651,12 @@
       const person = trackedPersons[pId];
       if (!person) return;
 
-      if (confirm(`Remove "${person.name}" and their path from the map?`)) {
+      if (confirm(`Remove "${person.name}" from the map?`)) {
         map.removeLayer(person.marker);
+        if (accuracyCircles[pId]) {
+          map.removeLayer(accuracyCircles[pId]);
+          delete accuracyCircles[pId];
+        }
         if (movementPaths[pId]) {
           map.removeLayer(movementPaths[pId]);
           delete movementPaths[pId];
@@ -639,10 +676,12 @@
     };
 
     window.clearAllPersons = function() {
-      if (confirm("Remove all persons and live paths from this room map?")) {
+      if (confirm("Remove all persons and trails from this room map?")) {
         Object.values(trackedPersons).forEach(p => map.removeLayer(p.marker));
+        Object.values(accuracyCircles).forEach(c => map.removeLayer(c));
         Object.values(movementPaths).forEach(line => map.removeLayer(line));
         for (let key in trackedPersons) delete trackedPersons[key];
+        for (let key in accuracyCircles) delete accuracyCircles[key];
         for (let key in movementPaths) delete movementPaths[key];
         savePersonsToStorage();
         renderList();
@@ -685,15 +724,24 @@
               ${isRecentlyActive ? '🟢 Live (1s)' : (p.timestamp || 'Saved')}
             </span>
           </div>
+
+          ${p.address ? `
+            <div class="street-badge">
+              <span>📍</span>
+              <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.address)}</span>
+            </div>
+          ` : ''}
           
-          <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-bottom: 8px; font-family: monospace;">
-            <span>Coords: ${Number(p.lat).toFixed(5)}, ${Number(p.lng).toFixed(5)}</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; color: #94a3b8; margin-bottom: 8px; font-family: monospace;">
+            <span>Precision: <b style="color: #38bdf8;">±${p.accuracy || 5}m</b></span>
             <span>Speed: <b style="color: #38bdf8;">${p.speed || 0} km/h</b></span>
+            <span>Lat: ${Number(p.lat).toFixed(6)}</span>
+            <span>Lng: ${Number(p.lng).toFixed(6)}</span>
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
             <div style="display: flex; gap: 6px;">
-              <button onclick="map.setView([${p.lat}, ${p.lng}], 17)" class="btn-focus">Focus (Zoom)</button>
+              <button onclick="map.setView([${p.lat}, ${p.lng}], 18)" class="btn-focus">Focus (Zoom)</button>
               <a href="${gmapsUrl}" target="_blank" class="btn-gmaps">Google Maps ↗</a>
             </div>
             <button onclick="removePerson('${p.id}')" class="btn-remove-person" title="Remove person from map">
@@ -712,7 +760,7 @@
       return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
     }
 
-    // Worldwide Realtime MQTT Cloud Sync (1-Second Stream Receiver)
+    // Worldwide Realtime MQTT Cloud Sync
     const mqttTopic = `antigravity_tracker_v3/${roomId}/#`;
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
       clientId: 'host_' + Math.random().toString(36).substring(2, 8),
@@ -722,7 +770,7 @@
 
     mqttClient.on('connect', () => {
       document.getElementById('statusDot').className = 'status-dot online';
-      document.getElementById('statusText').innerText = '1s Live Cloud Stream Active';
+      document.getElementById('statusText').innerText = '1s Live Stream Active';
       mqttClient.subscribe(mqttTopic, { qos: 1 });
       mqttClient.subscribe(`antigravity_tracker_v3/${roomId}`, { qos: 1 });
     });
@@ -793,7 +841,7 @@
     // WhatsApp Action
     document.getElementById('btnWhatsApp').addEventListener('click', () => {
       const shareUrl = buildShareUrl();
-      const msg = encodeURIComponent(`Please tap this link to share your live location for our group tracking:\n${shareUrl}`);
+      const msg = encodeURIComponent(`Please tap this link to share your high-precision live location for our group tracking:\n${shareUrl}`);
       window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
     });
 
