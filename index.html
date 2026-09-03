@@ -248,6 +248,7 @@
       transition: all 0.2s;
     }
     .btn-copy-card:hover { background: #374151; color: #fff; }
+    .btn-copy-card.copied { background: #065f46; color: #34d399; border-color: #059669; }
 
     .empty-state {
       text-align: center;
@@ -291,7 +292,7 @@
         </div>
         <div>
           <h1>Multi-Person Location Hub</h1>
-          <p>Create tracking rooms • Only you view the map • Data permanently saved</p>
+          <p>Create tracking rooms • Only you view the map • 500km+ Range</p>
         </div>
       </div>
 
@@ -313,7 +314,7 @@
 
     <div class="create-card">
       <div class="create-title">Create a New Tracking Room</div>
-      <div class="create-desc">Clicking create will list your room below with clickable Hyperlinks to share.</div>
+      <div class="create-desc">Clicking create will generate a clickable Hyperlink ready to share on WhatsApp.</div>
       
       <form id="createRoomForm" class="create-form" onsubmit="event.preventDefault(); createRoom();">
         <input id="roomNameInput" class="input-room-name" type="text" placeholder="Enter Room Name (e.g. Family Trip, Delivery Team, Friends)" required autofocus>
@@ -347,13 +348,12 @@
 
   <div id="toast">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    <span id="toastMsg">Hyperlink copied!</span>
+    <span id="toastMsg">Link copied to clipboard!</span>
   </div>
 
   <script>
     const STORAGE_KEY = 'antigravity_tracking_rooms';
 
-    // Display logged in User ID
     try {
       const session = JSON.parse(localStorage.getItem('antigravity_logged_in_user'));
       if (session && session.userId) {
@@ -415,7 +415,7 @@
 
       input.value = '';
       renderRoomsList();
-      showToast(`Room "${name}" created with clickable Hyperlink!`);
+      showToast(`Room "${name}" created!`);
     }
 
     function deleteRoom(roomId, event) {
@@ -432,34 +432,77 @@
       showToast("Room and saved location data deleted.");
     }
 
-    function copyShareHyperlink(roomId, event) {
+    // 100% Robust Universal Copy Function (Supports Android, iOS, Windows, Mac)
+    function copyShareHyperlink(roomId, btnElement, event) {
       if (event) event.stopPropagation();
       const shareUrl = buildShareUrl(roomId);
-      const htmlContent = `<a href="${shareUrl}" target="_blank">${shareUrl}</a>`;
+      
+      // Update button text to give instant visual feedback
+      if (btnElement) {
+        const origHtml = btnElement.innerHTML;
+        btnElement.classList.add('copied');
+        btnElement.innerHTML = `<span>✓ Copied!</span>`;
+        setTimeout(() => {
+          btnElement.classList.remove('copied');
+          btnElement.innerHTML = origHtml;
+        }, 2000);
+      }
 
-      if (navigator.clipboard && window.ClipboardItem) {
-        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-        const blobText = new Blob([shareUrl], { type: 'text/plain' });
-        const item = new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText });
+      universalCopyText(shareUrl, "Link copied to clipboard! (Ready to paste in WhatsApp)");
+    }
 
-        navigator.clipboard.write([item]).then(() => {
-          showToast("Hyperlink copied! (Clickable format ready to paste)");
+    function universalCopyText(textToCopy, successMsg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          showToast(successMsg);
         }).catch(() => {
-          fallbackCopy(shareUrl);
+          execFallbackCopy(textToCopy, successMsg);
         });
       } else {
-        fallbackCopy(shareUrl);
+        execFallbackCopy(textToCopy, successMsg);
       }
     }
 
-    function fallbackCopy(url) {
-      const el = document.createElement('textarea');
-      el.value = url;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      showToast("Link copied to clipboard!");
+    function execFallbackCopy(textToCopy, successMsg) {
+      const textArea = document.createElement("textarea");
+      textArea.value = textToCopy;
+      textArea.style.position = "fixed";
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.width = "2em";
+      textArea.style.height = "2em";
+      textArea.style.padding = "0";
+      textArea.style.border = "none";
+      textArea.style.outline = "none";
+      textArea.style.boxShadow = "none";
+      textArea.style.background = "transparent";
+      textArea.setAttribute("readonly", "");
+
+      document.body.appendChild(textArea);
+
+      if (navigator.userAgent.match(/ipad|ipod|iphone/i)) {
+        const range = document.createRange();
+        range.selectNodeContents(textArea);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        textArea.setSelectionRange(0, 999999);
+      } else {
+        textArea.select();
+      }
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast(successMsg);
+        } else {
+          prompt("Copy your link manually:", textToCopy);
+        }
+      } catch (err) {
+        prompt("Copy your link manually:", textToCopy);
+      }
+
+      document.body.removeChild(textArea);
     }
 
     function renderRoomsList() {
@@ -518,7 +561,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
               <span>Open Map</span>
             </a>
-            <button class="btn-copy-card" title="Copy Clickable Hyperlink" onclick="copyShareHyperlink('${room.id}', event)">
+            <button class="btn-copy-card" title="Copy Clickable Hyperlink" onclick="copyShareHyperlink('${room.id}', this, event)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
