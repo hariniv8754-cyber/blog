@@ -354,24 +354,23 @@
           Send this link to friends. When opened, their phone <b>continuously broadcasts pinpoint GPS coordinates across any distance (500km+)</b>.
         </p>
 
-        <!-- Clickable Hyperlink Display -->
-        <div class="hyperlink-card">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-          </svg>
-          <a id="shareHyperlinkAnchor" href="#" target="_blank" class="hyperlink-tag">Generating link...</a>
+        <!-- 1-Tap Select & Copy Input Box -->
+        <div style="margin-top: 10px; margin-bottom: 10px; position: relative;">
+          <input id="shareUrlInput" type="text" readonly onclick="this.select(); universalCopyText(this.value, 'Link copied from input box!');"
+            style="width: 100%; background: #090d16; border: 1.5px solid #38bdf8; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #38bdf8; outline: none; font-family: monospace; cursor: pointer;"
+            value="Generating link..." title="Tap anywhere to select and copy">
+          <span style="font-size: 10px; color: #94a3b8; display: block; margin-top: 4px; text-align: right;">👉 Tap box to copy or select</span>
         </div>
 
         <div class="btn-row">
-          <button id="btnCopyHyperlink" class="btn btn-copy" title="Copy Clickable Hyperlink to Clipboard">
+          <button id="btnCopyHyperlink" class="btn btn-copy" title="Copy Link to Clipboard">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
             </svg>
-            <span>Copy Link</span>
+            <span id="copyBtnText">Copy Link</span>
           </button>
-          <button id="btnWhatsApp" class="btn btn-whatsapp" title="Share via WhatsApp">
+          <button id="btnWhatsApp" class="btn btn-whatsapp" title="Share via WhatsApp or Native Share">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -487,13 +486,14 @@
 
     function updateShareDisplay() {
       const shareUrl = buildShareUrl();
-      const anchor = document.getElementById('shareHyperlinkAnchor');
-      anchor.href = shareUrl;
-      anchor.innerText = shareUrl;
+      const inputEl = document.getElementById('shareUrlInput');
+      if (inputEl) inputEl.value = shareUrl;
 
       const qrEl = document.getElementById("qrcode");
-      qrEl.innerHTML = '';
-      qrInstance = new QRCode(qrEl, { text: shareUrl, width: 120, height: 120 });
+      if (qrEl) {
+        qrEl.innerHTML = '';
+        qrInstance = new QRCode(qrEl, { text: shareUrl, width: 120, height: 120 });
+      }
     }
     updateShareDisplay();
 
