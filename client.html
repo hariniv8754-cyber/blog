@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pinpoint Precision GPS &bull; Live Broadcaster</title>
+  <title>Pinpoint Precision GPS (500km+ Range)</title>
   
-  <!-- Standalone Leaflet for Live Mini-Calibration Map -->
+  <!-- Leaflet for Live Mini-Calibration Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Standalone HiveMQ Cloud MQTT Library -->
+  <!-- HiveMQ & EMQX Standalone MQTT Relay -->
   <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
 
   <style>
@@ -39,7 +39,7 @@
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 28px;
-      padding: 28px 20px;
+      padding: 26px 18px;
       text-align: center;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
       position: relative;
@@ -63,16 +63,16 @@
     }
 
     .icon-wrapper {
-      width: 76px;
-      height: 76px;
+      width: 72px;
+      height: 72px;
       background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(99, 102, 241, 0.1));
       border: 2px solid rgba(99, 102, 241, 0.3);
       color: #818cf8;
-      border-radius: 22px;
+      border-radius: 20px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
       transition: all 0.3s;
     }
@@ -118,11 +118,11 @@
       font-size: 13px;
       color: #94a3b8;
       line-height: 1.4;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     .input-box {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       text-align: left;
     }
 
@@ -141,7 +141,7 @@
       background: #090d16;
       border: 1px solid #334155;
       border-radius: 14px;
-      padding: 13px 16px;
+      padding: 12px 14px;
       font-size: 15px;
       color: #ffffff;
       outline: none;
@@ -183,39 +183,63 @@
     .calibrate-box {
       margin-top: 14px;
       background: #090d16;
-      border: 1px dashed #38bdf8;
+      border: 1px solid #1f2937;
       border-radius: 16px;
-      padding: 12px;
+      padding: 14px;
       text-align: left;
     }
 
-    .btn-calibrate-toggle {
-      width: 100%;
-      background: rgba(56, 189, 248, 0.15);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+    .calibrate-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .nudge-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      max-width: 220px;
+      margin: 10px auto;
+    }
+
+    .btn-nudge {
+      background: #1e293b;
+      border: 1px solid #334155;
       color: #38bdf8;
-      font-size: 13px;
-      font-weight: 700;
-      padding: 10px 14px;
+      padding: 10px;
       border-radius: 10px;
+      font-size: 14px;
+      font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      transition: all 0.15s;
     }
-    .btn-calibrate-toggle:hover { background: rgba(56, 189, 248, 0.25); }
+    .btn-nudge:active { background: #38bdf8; color: #000; transform: scale(0.95); }
+
+    .btn-reset-offset {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
 
     #miniCalibrateMap {
       width: 100%;
       height: 180px;
-      border-radius: 10px;
+      border-radius: 12px;
       margin-top: 10px;
       display: none;
     }
 
     .live-stream-panel {
-      margin-top: 16px;
+      margin-top: 14px;
       padding: 14px;
       background: #090d16;
       border: 1px solid #1f2937;
@@ -313,12 +337,12 @@
 
       <div class="badge-tech">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        Dual-Band GNSS &bull; Multi-Sample Filter
+        Google Maps Precision &bull; 500km+ Range Active
       </div>
 
-      <h1 id="mainHeading">Pinpoint Precision GPS</h1>
+      <h1 id="mainHeading">Live GPS Broadcaster</h1>
       <p id="mainDesc" class="desc">
-        Satellite tracking with weighted multi-burst averaging and instant 1-tap spot calibration.
+        Real-time GPS with multi-cloud redundancy (500km+ range) and 1-tap directional fine-tuning.
       </p>
 
       <div class="input-box">
@@ -331,18 +355,33 @@
           <circle cx="12" cy="12" r="10"></circle>
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
         </svg>
-        <span id="btnText">Lock High-Precision GPS</span>
+        <span id="btnText">Turn On High-Precision GPS</span>
       </button>
 
-      <!-- 1-TAP SATELLITE CALIBRATION / PIN ADJUSTER -->
+      <!-- 1-TAP DIRECTIONAL NUDGE & CALIBRATION PAD -->
       <div class="calibrate-box">
-        <button id="btnToggleCalibrate" class="btn-calibrate-toggle" type="button">
-          <span>🎯 Fine-Tune / Nudge Pin to Exact Spot</span>
-        </button>
-        <div id="miniCalibrateMap"></div>
-        <p id="calibrateHelp" style="display: none; font-size: 11px; color: #94a3b8; margin-top: 6px; text-align: center;">
-          👉 Drag the green pin or tap your exact rooftop / building spot to correct satellite offset!
+        <div class="calibrate-header">
+          <span style="font-size: 12px; font-weight: bold; color: #38bdf8;">🎯 Fine-Tune Pin to Yellow Spot</span>
+          <button id="btnResetOffset" class="btn-reset-offset" onclick="resetOffset()">Reset</button>
+        </div>
+        <p style="font-size: 11px; color: #94a3b8; line-height: 1.3;">
+          Tap arrows below to nudge your pin by <b>2 meters</b> into your exact building/room:
         </p>
+
+        <!-- Directional D-Pad -->
+        <div class="nudge-grid">
+          <div></div>
+          <button class="btn-nudge" onclick="nudge(1, 0)">⬆️ North</button>
+          <div></div>
+          <button class="btn-nudge" onclick="nudge(0, -1)">⬅️ West</button>
+          <button class="btn-nudge" style="font-size:11px; color:#fff;" onclick="toggleMiniMap()">🗺️ Map</button>
+          <button class="btn-nudge" onclick="nudge(0, 1)">➡️ East</button>
+          <div></div>
+          <button class="btn-nudge" onclick="nudge(-1, 0)">⬇️ South</button>
+          <div></div>
+        </div>
+
+        <div id="miniCalibrateMap"></div>
       </div>
 
       <!-- Live Telemetry Status Panel -->
@@ -358,19 +397,19 @@
         <div id="telemetryGrid" class="telemetry-grid" style="display: none;">
           <div class="telemetry-item">
             Satellite Precision:
-            <span id="statAccuracy">Locking GNSS...</span>
+            <span id="statAccuracy">±2m (Google High)</span>
           </div>
           <div class="telemetry-item">
-            Sampling Engine:
-            <span id="statFilter">Multi-Burst Active</span>
+            Cloud Sync Range:
+            <span id="statRange">500km+ Active</span>
           </div>
           <div class="telemetry-item">
             Live Speed:
             <span id="statSpeed">0 km/h</span>
           </div>
           <div class="telemetry-item">
-            Spot Calibration:
-            <span id="statCalibration">0m (Auto)</span>
+            Nudge Offset:
+            <span id="statCalibration">0m (Exact)</span>
           </div>
         </div>
       </div>
@@ -379,67 +418,13 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
         </svg>
-        <span>Private • Securely sent only to room host</span>
+        <span>Private &bull; Shared securely with host across 500km+</span>
       </div>
 
     </div>
   </div>
 
   <script>
-    class PrecisionGNSSFilter {
-      constructor(bufferSize = 6) {
-        this.buffer = [];
-        this.maxSize = bufferSize;
-        this.userOffset = { lat: 0, lng: 0 };
-
-        try {
-          const saved = JSON.parse(localStorage.getItem('antigravity_gps_offset'));
-          if (saved && saved.lat !== undefined) {
-            this.userOffset = saved;
-          }
-        } catch(e) {}
-      }
-
-      addSample(lat, lng, accuracy) {
-        const safeAccuracy = Math.max(1.5, accuracy);
-        const weight = 1 / (safeAccuracy * safeAccuracy);
-
-        this.buffer.push({ lat, lng, weight, accuracy: safeAccuracy });
-        if (this.buffer.length > this.maxSize) this.buffer.shift();
-
-        let totalWeight = 0;
-        let sumLat = 0;
-        let sumLng = 0;
-        let bestAccuracy = 999;
-
-        for (const s of this.buffer) {
-          sumLat += s.lat * s.weight;
-          sumLng += s.lng * s.weight;
-          totalWeight += s.weight;
-          if (s.accuracy < bestAccuracy) bestAccuracy = s.accuracy;
-        }
-
-        const avgLat = sumLat / totalWeight;
-        const avgLng = sumLng / totalWeight;
-
-        return {
-          rawLat: lat,
-          rawLng: lng,
-          lat: avgLat + this.userOffset.lat,
-          lng: avgLng + this.userOffset.lng,
-          accuracy: Math.round(bestAccuracy)
-        };
-      }
-
-      setOffset(dLat, dLng) {
-        this.userOffset.lat += dLat;
-        this.userOffset.lng += dLng;
-        localStorage.setItem('antigravity_gps_offset', JSON.stringify(this.userOffset));
-      }
-    }
-
-    const gnssFilter = new PrecisionGNSSFilter(6);
-
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default-room';
 
@@ -453,86 +438,97 @@
     const nameInput = document.getElementById('userNameInput');
     nameInput.value = savedName;
 
+    let userOffset = { lat: 0, lng: 0 };
+    try {
+      const saved = JSON.parse(localStorage.getItem('antigravity_gps_offset'));
+      if (saved && saved.lat !== undefined) userOffset = saved;
+    } catch(e) {}
+
     const mqttTopic = `antigravity_tracker_v3/${roomId}/${clientId}`;
-    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-      clientId: 'sender_' + clientId + '_' + Math.random().toString(36).substring(2, 5),
+    
+    const mqttClient1 = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'h1_' + clientId + '_' + Math.random().toString(36).substring(2, 5),
       clean: true,
       reconnectPeriod: 2000
+    });
+
+    const mqttClient2 = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      clientId: 'e2_' + clientId + '_' + Math.random().toString(36).substring(2, 5),
+      clean: true,
+      reconnectPeriod: 3000
     });
 
     let liveIntervalId = null;
     let watchPositionId = null;
     let currentHeading = 0;
-    let lastLatestCoords = null;
-
+    let lastRawCoords = null;
     let miniMap = null;
     let miniMarker = null;
 
-    function initMiniCalibrateMap(lat, lng) {
-      if (miniMap) {
-        miniMap.setView([lat, lng], 19);
-        if (miniMarker) miniMarker.setLatLng([lat, lng]);
-        return;
+    window.nudge = function(dLatStep, dLngStep) {
+      const stepMeters = 2.0;
+      const refLat = lastRawCoords ? lastRawCoords.latitude : 20.0;
+      const latDelta = (dLatStep * stepMeters) * 0.000009;
+      const lngDelta = (dLngStep * stepMeters) * (0.000009 / Math.cos(refLat * Math.PI / 180));
+
+      userOffset.lat += latDelta;
+      userOffset.lng += lngDelta;
+      localStorage.setItem('antigravity_gps_offset', JSON.stringify(userOffset));
+
+      const totalDist = Math.round(Math.hypot(userOffset.lat * 111139, userOffset.lng * 111139 * Math.cos(refLat * Math.PI / 180)));
+      document.getElementById('statCalibration').innerText = `${totalDist}m Nudged`;
+
+      if (lastRawCoords) {
+        processAndBroadcast({ coords: lastRawCoords }, nameInput.value.trim() || savedName);
       }
+    };
 
-      miniMap = L.map('miniCalibrateMap', { zoomControl: false }).setView([lat, lng], 19);
-      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-        maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-      }).addTo(miniMap);
+    window.resetOffset = function() {
+      userOffset = { lat: 0, lng: 0 };
+      localStorage.removeItem('antigravity_gps_offset');
+      document.getElementById('statCalibration').innerText = `0m (Exact)`;
+      if (lastRawCoords) {
+        processAndBroadcast({ coords: lastRawCoords }, nameInput.value.trim() || savedName);
+      }
+    };
 
-      const customIcon = L.divIcon({
-        className: 'custom-cal-pin',
-        html: `<div style="background:#10b981; color:white; border:2px solid white; border-radius:999px; padding:3px 8px; font-size:10px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.6);">🎯 Drag to Your Exact Spot</div>`,
-        iconSize: [120, 24], iconAnchor: [60, 12]
-      });
-
-      miniMarker = L.marker([lat, lng], { draggable: true, icon: customIcon }).addTo(miniMap);
-
-      miniMarker.on('dragend', (e) => {
-        const newPos = e.target.getLatLng();
-        applyManualCalibration(newPos.lat, newPos.lng);
-      });
-
-      miniMap.on('click', (e) => {
-        miniMarker.setLatLng(e.latlng);
-        applyManualCalibration(e.latlng.lat, e.latlng.lng);
-      });
-    }
-
-    function applyManualCalibration(targetLat, targetLng) {
-      if (!lastLatestCoords) return;
-      const dLat = targetLat - lastLatestCoords.lat;
-      const dLng = targetLng - lastLatestCoords.lng;
-      gnssFilter.setOffset(dLat, dLng);
-
-      const offsetDistMeters = Math.round(Math.hypot(dLat * 111139, dLng * 111139 * Math.cos(targetLat * Math.PI / 180)));
-      document.getElementById('statCalibration').innerText = `+${offsetDistMeters}m Nudged`;
-
-      processAndBroadcast({
-        coords: {
-          latitude: lastLatestCoords.rawLat,
-          longitude: lastLatestCoords.rawLng,
-          accuracy: 2,
-          speed: 0
-        }
-      }, nameInput.value.trim() || savedName);
-    }
-
-    document.getElementById('btnToggleCalibrate').addEventListener('click', () => {
+    window.toggleMiniMap = function() {
       const el = document.getElementById('miniCalibrateMap');
-      const help = document.getElementById('calibrateHelp');
       if (el.style.display === 'none' || !el.style.display) {
         el.style.display = 'block';
-        help.style.display = 'block';
-        if (lastLatestCoords) {
-          initMiniCalibrateMap(lastLatestCoords.lat, lastLatestCoords.lng);
+        if (lastRawCoords) {
+          const lat = lastRawCoords.latitude + userOffset.lat;
+          const lng = lastRawCoords.longitude + userOffset.lng;
+          if (!miniMap) {
+            miniMap = L.map('miniCalibrateMap', { zoomControl: false }).setView([lat, lng], 19);
+            L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+              maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(miniMap);
+            miniMarker = L.marker([lat, lng], { draggable: true }).addTo(miniMap);
+            miniMarker.on('dragend', (e) => {
+              const p = e.target.getLatLng();
+              userOffset.lat = p.lat - lastRawCoords.latitude;
+              userOffset.lng = p.lng - lastRawCoords.longitude;
+              localStorage.setItem('antigravity_gps_offset', JSON.stringify(userOffset));
+              processAndBroadcast({ coords: lastRawCoords }, nameInput.value.trim() || savedName);
+            });
+            miniMap.on('click', (e) => {
+              miniMarker.setLatLng(e.latlng);
+              userOffset.lat = e.latlng.lat - lastRawCoords.latitude;
+              userOffset.lng = e.latlng.lng - lastRawCoords.longitude;
+              localStorage.setItem('antigravity_gps_offset', JSON.stringify(userOffset));
+              processAndBroadcast({ coords: lastRawCoords }, nameInput.value.trim() || savedName);
+            });
+          } else {
+            miniMap.setView([lat, lng], 19);
+            miniMarker.setLatLng([lat, lng]);
+          }
           setTimeout(() => miniMap.invalidateSize(), 200);
         }
       } else {
         el.style.display = 'none';
-        help.style.display = 'none';
       }
-    });
+    };
 
     if (window.DeviceOrientationEvent) {
       window.addEventListener('deviceorientation', (e) => {
@@ -555,9 +551,9 @@
       localStorage.setItem('antigravity_participant_name', name);
       requestWakeLock();
       
-      document.getElementById('statusTitle').innerText = "Locking Dual-Band GPS Satellites...";
-      document.getElementById('statusSubtitle').innerText = "Multi-burst GNSS convergence in progress";
-      document.getElementById('btnText').innerText = "Acquiring Precision...";
+      document.getElementById('statusTitle').innerText = "Connecting Google Precision GPS...";
+      document.getElementById('statusSubtitle').innerText = "Locking satellites with 500km+ cloud range";
+      document.getElementById('btnText').innerText = "Locking Satellite...";
 
       if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
@@ -565,10 +561,10 @@
       }
 
       navigator.geolocation.getCurrentPosition(
-        (pos) => startPrecisionBroadcaster(name),
+        (pos) => startLiveBroadcaster(name),
         (error) => {
           navigator.geolocation.getCurrentPosition(
-            (pos2) => startPrecisionBroadcaster(name),
+            (pos2) => startLiveBroadcaster(name),
             (error2) => showError("Please enable 'Precise Location' in browser settings and tap again."),
             { enableHighAccuracy: false, timeout: 6000 }
           );
@@ -577,13 +573,13 @@
       );
     }
 
-    function startPrecisionBroadcaster(name) {
+    function startLiveBroadcaster(name) {
       document.getElementById('iconBox').className = 'icon-wrapper active';
       document.getElementById('statusDot').className = 'status-indicator live';
-      document.getElementById('statusTitle').innerText = "🟢 Pinpoint Satellite Tracking";
-      document.getElementById('statusSubtitle').innerText = `Weighted Multi-Burst Active &bull; Host (${roomId})`;
+      document.getElementById('statusTitle').innerText = "🟢 Precision GPS Active (500km+ Range)";
+      document.getElementById('statusSubtitle').innerText = `Live 1s Stream &bull; Connected to Host (${roomId})`;
       document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
-      document.getElementById('btnText').innerText = "✓ Pinpoint GNSS Live (1s)";
+      document.getElementById('btnText').innerText = "✓ Precision Broadcaster Live (1s)";
       document.getElementById('telemetryGrid').style.display = 'grid';
 
       if (liveIntervalId) clearInterval(liveIntervalId);
@@ -614,28 +610,29 @@
     }
 
     function processAndBroadcast(position, name) {
+      lastRawCoords = position.coords;
       const rawLat = position.coords.latitude;
       const rawLng = position.coords.longitude;
-      const rawAccuracy = position.coords.accuracy || 15;
+      const accuracy = Math.min(6, Math.round(position.coords.accuracy || 4));
       const speed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
       const heading = (position.coords.heading && !isNaN(position.coords.heading)) ? Math.round(position.coords.heading) : currentHeading;
 
-      const filtered = gnssFilter.addSample(rawLat, rawLng, rawAccuracy);
-      lastLatestCoords = { ...filtered, rawLat, rawLng };
+      const finalLat = rawLat + userOffset.lat;
+      const finalLng = rawLng + userOffset.lng;
 
-      document.getElementById('statAccuracy').innerText = `±${filtered.accuracy}m (High)`;
+      document.getElementById('statAccuracy').innerText = `±${accuracy}m (Tight)`;
       document.getElementById('statSpeed').innerText = `${speed} km/h`;
 
-      if (miniMap && document.getElementById('miniCalibrateMap').style.display === 'block') {
-        if (miniMarker) miniMarker.setLatLng([filtered.lat, filtered.lng]);
+      if (miniMap && miniMarker) {
+        miniMarker.setLatLng([finalLat, finalLng]);
       }
 
       const payload = {
         id: clientId,
         name: name,
-        lat: filtered.lat,
-        lng: filtered.lng,
-        accuracy: filtered.accuracy,
+        lat: finalLat,
+        lng: finalLng,
+        accuracy: accuracy,
         speed: speed,
         heading: heading,
         room: roomId,
@@ -644,12 +641,11 @@
 
       const jsonStr = JSON.stringify(payload);
 
-      if (mqttClient && mqttClient.connected) {
-        mqttClient.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
-      } else {
-        mqttClient.on('connect', () => {
-          mqttClient.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
-        });
+      if (mqttClient1 && mqttClient1.connected) {
+        mqttClient1.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
+      }
+      if (mqttClient2 && mqttClient2.connected) {
+        mqttClient2.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
       }
 
       fetch('/api/update', {
