@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Live Map - High-Precision 500km+ Multi-Person Tracker</title>
+  <title>Quantum GPS - High-Precision Command Tracker (500km+)</title>
   
   <!-- Authentication Guard -->
   <script>
@@ -22,13 +22,59 @@
   <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #090d16; color: #f1f5f9; min-height: 100vh; }
-    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    body {
+      background-color: #060913;
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Glow Background */
+    .bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .orb-1 {
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0) 70%);
+      filter: blur(50px);
+    }
+
+    .orb-2 {
+      position: absolute;
+      bottom: -100px;
+      left: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0) 70%);
+      filter: blur(60px);
+    }
+
     header {
-      background: #111827;
-      border-bottom: 1px solid #1f2937;
-      padding: 12px 20px;
+      background: rgba(13, 19, 35, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -37,134 +83,173 @@
       z-index: 1000;
       flex-wrap: wrap;
       gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    
     .btn-back {
-      background: #1f2937;
-      border: 1px solid #374151;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: #cbd5e1;
-      padding: 8px 12px;
-      border-radius: 8px;
+      padding: 8px 14px;
+      border-radius: 10px;
       text-decoration: none;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
-    .btn-back:hover { background: #374151; color: white; }
+    .btn-back:hover {
+      background: #1f2937;
+      color: #38bdf8;
+      border-color: #38bdf8;
+      transform: translateX(-2px);
+    }
 
-    .header-title { font-size: 16px; font-weight: 700; color: #fff; }
-    .header-sub { font-size: 11px; color: #9ca3af; }
+    .header-title {
+      font-size: 16px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 30%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-sub { font-size: 11px; color: #94a3b8; }
 
     .status-pill {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      gap: 8px;
+      padding: 6px 14px;
       border-radius: 999px;
       font-size: 12px;
-      font-weight: 600;
-      background: #1f2937;
-      border: 1px solid #374151;
+      font-weight: 700;
+      background: rgba(9, 13, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
+    
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #eab308; }
-    .status-dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse-green 1.5s infinite; }
+    .status-dot.online {
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse-green 1.5s infinite;
+    }
 
     @keyframes pulse-green {
-      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
       100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
     .btn-logout-small {
-      background: rgba(239, 68, 68, 0.15);
+      background: rgba(239, 68, 68, 0.12);
       border: 1px solid rgba(239, 68, 68, 0.3);
       color: #f87171;
-      padding: 6px 10px;
-      border-radius: 8px;
+      padding: 7px 12px;
+      border-radius: 10px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      transition: all 0.2s;
     }
-    .btn-logout-small:hover { background: rgba(239, 68, 68, 0.3); color: #fff; }
+    .btn-logout-small:hover { background: rgba(239, 68, 68, 0.25); color: #fff; }
 
     .main-container {
-      max-width: 1440px;
+      max-width: 1480px;
       margin: 0 auto;
       padding: 16px;
       display: grid;
-      grid-template-columns: 1fr 390px;
-      gap: 16px;
+      grid-template-columns: 1fr 400px;
+      gap: 18px;
+      position: relative;
+      z-index: 10;
     }
-    @media (max-width: 960px) { .main-container { grid-template-columns: 1fr; } }
+    @media (max-width: 980px) { .main-container { grid-template-columns: 1fr; } }
 
+    /* Cyber Glass Cards */
     .card {
-      background: #111827;
-      border: 1px solid #1f2937;
+      background: rgba(13, 19, 35, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .map-frame {
+      position: relative;
       border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      overflow: hidden;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .map-frame::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 16px;
+      height: 16px;
+      border-top: 2px solid #38bdf8;
+      border-left: 2px solid #38bdf8;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .map-frame::after {
+      content: '';
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 16px;
+      height: 16px;
+      border-bottom: 2px solid #818cf8;
+      border-right: 2px solid #818cf8;
+      z-index: 999;
+      pointer-events: none;
     }
 
     #map {
-      height: calc(100vh - 150px);
-      min-height: 520px;
-      border-radius: 12px;
+      height: calc(100vh - 170px);
+      min-height: 540px;
+      border-radius: 14px;
       z-index: 10;
     }
 
     .leaflet-control-layers {
-      background: #111827 !important;
-      border: 1px solid #374151 !important;
-      border-radius: 10px !important;
+      background: rgba(13, 19, 35, 0.9) !important;
+      backdrop-filter: blur(15px) !important;
+      border: 1px solid rgba(56, 189, 248, 0.3) !important;
+      border-radius: 14px !important;
       color: #f1f5f9 !important;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
       font-size: 12px !important;
-      padding: 6px 10px !important;
+      padding: 8px 12px !important;
     }
     .leaflet-control-layers-base label {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-      cursor: pointer;
-    }
-
-    .sidebar { display: flex; flex-direction: column; gap: 16px; }
-
-    .hyperlink-card {
-      background: #090d16;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-top: 10px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
       gap: 8px;
-      overflow: hidden;
+      margin-bottom: 6px;
+      cursor: pointer;
+      font-weight: 600;
     }
-    .hyperlink-tag {
-      color: #38bdf8;
-      font-size: 12px;
-      text-decoration: underline;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-    }
-    .hyperlink-tag:hover { color: #7dd3fc; }
+
+    .sidebar { display: flex; flex-direction: column; gap: 18px; }
 
     .btn-row { display: flex; gap: 8px; }
     .btn {
       flex: 1;
-      padding: 11px;
+      padding: 12px;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -172,88 +257,137 @@
       gap: 6px;
       transition: all 0.2s;
     }
-    .btn-copy { background: #4f46e5; color: white; }
-    .btn-copy:hover { background: #4338ca; }
-    .btn-whatsapp { background: #059669; color: white; }
-    .btn-whatsapp:hover { background: #047857; }
-    .btn-qr { background: #374151; color: white; flex: 0 0 46px; }
-    .btn-qr:hover { background: #4b5563; }
+    .btn-copy {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+    }
+    .btn-copy:hover { transform: translateY(-1px); }
+    .btn-whatsapp {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: white;
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    }
+    .btn-whatsapp:hover { transform: translateY(-1px); }
+    .btn-qr {
+      background: rgba(31, 41, 55, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: white;
+      flex: 0 0 46px;
+    }
+    .btn-qr:hover { background: #374151; }
 
     .btn-fit-all {
-      background: #0284c7;
+      background: linear-gradient(135deg, #0284c7, #06b6d4);
       color: white;
       border: none;
-      border-radius: 8px;
-      padding: 6px 10px;
+      border-radius: 10px;
+      padding: 7px 12px;
       font-size: 12px;
-      font-weight: bold;
+      font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: background 0.2s;
-    }
-    .btn-fit-all:hover { background: #0369a1; }
-
-    .person-card {
-      background: #090d16;
-      border: 1px solid #1f2937;
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 10px;
       transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+    .btn-fit-all:hover { transform: scale(1.02); }
+
+    /* Animated Live Pin Styling */
+    .custom-pin-pulse {
       position: relative;
     }
-    .person-card:hover { border-color: #4f46e5; }
+    .custom-pin-pulse::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      right: -6px;
+      bottom: -6px;
+      border-radius: 999px;
+      border: 2px solid rgba(56, 189, 248, 0.6);
+      animation: pinSonar 1.8s infinite ease-out;
+      pointer-events: none;
+    }
+
+    @keyframes pinSonar {
+      0% { transform: scale(0.9); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .person-card {
+      background: rgba(9, 13, 24, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      transition: all 0.25s;
+      position: relative;
+      animation: cardSlideIn 0.3s ease;
+    }
+
+    @keyframes cardSlideIn {
+      from { opacity: 0; transform: translateX(10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .person-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateX(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    }
     
     .btn-gmaps {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(16, 185, 129, 0.15);
+      background: rgba(16, 185, 129, 0.12);
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: #34d399;
       text-decoration: none;
-      padding: 7px 11px;
-      border-radius: 8px;
+      padding: 7px 12px;
+      border-radius: 10px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       transition: all 0.2s;
     }
-    .btn-gmaps:hover { background: rgba(16, 185, 129, 0.3); }
+    .btn-gmaps:hover { background: rgba(16, 185, 129, 0.25); color: #fff; }
 
     .btn-focus {
       background: rgba(99, 102, 241, 0.15);
       border: 1px solid rgba(99, 102, 241, 0.3);
       color: #818cf8;
-      padding: 7px 11px;
-      border-radius: 8px;
+      padding: 7px 12px;
+      border-radius: 10px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      transition: all 0.2s;
     }
-    .btn-focus:hover { background: rgba(99, 102, 241, 0.3); }
+    .btn-focus:hover { background: rgba(99, 102, 241, 0.3); color: #fff; }
 
     .btn-remove-person {
-      background: rgba(239, 68, 68, 0.15);
+      background: rgba(239, 68, 68, 0.12);
       border: 1px solid rgba(239, 68, 68, 0.3);
       color: #f87171;
-      padding: 7px 9px;
-      border-radius: 8px;
+      padding: 7px 10px;
+      border-radius: 10px;
       cursor: pointer;
       font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
-    .btn-remove-person:hover { background: rgba(239, 68, 68, 0.3); }
+    .btn-remove-person:hover { background: rgba(239, 68, 68, 0.3); color: #fff; }
 
     .btn-clear-all {
       background: none;
       border: none;
       color: #94a3b8;
       font-size: 11px;
+      font-weight: 600;
       text-decoration: underline;
       cursor: pointer;
       padding: 2px 4px;
@@ -266,7 +400,7 @@
       height: 8px;
       border-radius: 50%;
       background: #10b981;
-      box-shadow: 0 0 8px #10b981;
+      box-shadow: 0 0 10px #10b981;
       animation: blink-live 1s infinite;
       margin-right: 4px;
     }
@@ -279,32 +413,41 @@
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #10b981;
+      background: linear-gradient(135deg, #10b981, #059669);
       color: #fff;
       padding: 14px 22px;
-      border-radius: 12px;
+      border-radius: 14px;
       font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      font-weight: 700;
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4);
       display: none;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       z-index: 9999;
-      animation: fadeIn 0.3s;
+      animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(15px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Ambient Glow Effects -->
+  <div class="bg-canvas">
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+  </div>
 
   <header>
     <div class="header-left">
       <a href="index.html" class="btn-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        <span>Back to Rooms</span>
+        <span>Command Hub</span>
       </a>
       <div>
-        <div class="header-title">Pinpoint Precision Google Maps Tracker</div>
+        <div class="header-title">Quantum Precision Live Tracker</div>
         <div class="header-sub">500km+ Range Active &bull; Dual-Cloud Redundancy &bull; 1s Live Stream</div>
       </div>
     </div>
@@ -313,7 +456,7 @@
         <span id="statusDot" class="status-dot"></span>
         <span id="statusText">Connecting Cloud...</span>
       </div>
-      <div class="status-pill" style="color: #818cf8;">
+      <div class="status-pill" style="color: #38bdf8; font-family: monospace;">
         Room: <b id="displayRoomId" style="margin-left: 4px;">...</b>
       </div>
       <button class="btn-logout-small" onclick="logoutAdmin()">Logout</button>
@@ -324,10 +467,10 @@
     
     <!-- LEFT: MAP (ONLY VISIBLE TO CREATOR) -->
     <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <h3 style="font-size: 15px; font-weight: 700;">Google Maps Precision View</h3>
-          <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 999px; font-weight: bold;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 style="font-size: 16px; font-weight: 800;">Google Maps Precision View</h3>
+          <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 3px 10px; border-radius: 999px; font-weight: 700;">
             <span class="live-beacon"></span> 500km+ Range Active
           </span>
         </div>
@@ -335,10 +478,12 @@
           <button class="btn-fit-all" onclick="fitAllPersons()">
             <span>🌐 Fit All (500km)</span>
           </button>
-          <span id="countBadge" style="font-size: 12px; color: #10b981; font-weight: 600;">0 Active Persons</span>
+          <span id="countBadge" style="font-size: 12px; color: #10b981; font-weight: 700;">0 Active Targets</span>
         </div>
       </div>
-      <div id="map"></div>
+      <div class="map-frame">
+        <div id="map"></div>
+      </div>
     </div>
 
     <!-- RIGHT: SIDEBAR -->
@@ -347,19 +492,19 @@
       <!-- SHARE HYPERLINK BOX -->
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h4 style="font-size: 14px; font-weight: 700;">Share High-Precision Link</h4>
-          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">500km+ Range</span>
+          <h4 style="font-size: 15px; font-weight: 800;">Share High-Precision Link</h4>
+          <span style="font-size: 11px; background: #0284c7; color: #e0f2fe; padding: 2px 8px; border-radius: 6px; font-weight: 700;">500km+ Range</span>
         </div>
-        <p style="font-size: 12px; color: #9ca3af; margin-top: 4px; line-height: 1.4;">
+        <p style="font-size: 12px; color: #9ca3af; margin-top: 6px; line-height: 1.4;">
           Send this link to friends. When opened, their phone <b>continuously broadcasts pinpoint GPS coordinates across any distance (500km+)</b>.
         </p>
 
         <!-- 1-Tap Select & Copy Input Box -->
-        <div style="margin-top: 10px; margin-bottom: 10px; position: relative;">
+        <div style="margin-top: 12px; margin-bottom: 12px; position: relative;">
           <input id="shareUrlInput" type="text" readonly onclick="this.select(); universalCopyText(this.value, 'Link copied from input box!');"
-            style="width: 100%; background: #090d16; border: 1.5px solid #38bdf8; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #38bdf8; outline: none; font-family: monospace; cursor: pointer;"
+            style="width: 100%; background: rgba(9, 13, 24, 0.9); border: 1.5px solid #38bdf8; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #38bdf8; outline: none; font-family: monospace; cursor: pointer;"
             value="Generating link..." title="Tap anywhere to select and copy">
-          <span style="font-size: 10px; color: #94a3b8; display: block; margin-top: 4px; text-align: right;">👉 Tap box to copy or select</span>
+          <span style="font-size: 10px; color: #94a3b8; display: block; margin-top: 5px; text-align: right;">👉 Tap box to copy or select</span>
         </div>
 
         <div class="btn-row">
@@ -388,7 +533,7 @@
         </div>
 
         <!-- QR Code -->
-        <div id="qrBox" style="display: none; text-align: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid #1f2937;">
+        <div id="qrBox" style="display: none; text-align: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1);">
           <span style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 8px;">Scan with phone camera to open live stream</span>
           <div id="qrcode" style="background: white; padding: 10px; border-radius: 12px; display: inline-block;"></div>
         </div>
@@ -397,17 +542,17 @@
       <!-- TRACKED PERSONS LIST (WITH REAL-TIME TELEMETRY) -->
       <div class="card" style="flex: 1; max-height: 480px; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h4 style="font-size: 14px; font-weight: 700;">
+          <h4 style="font-size: 15px; font-weight: 800;">
             <span>Live Friends Stream</span>
-            <span id="activeCount" style="color: #818cf8; margin-left: 4px;">0</span>
+            <span id="activeCount" style="color: #38bdf8; margin-left: 6px;">0</span>
           </h4>
           <button id="btnClearAll" class="btn-clear-all" onclick="clearAllPersons()" style="display: none;">Clear All</button>
         </div>
 
         <div id="emptyList" style="text-align: center; padding: 36px 12px; color: #64748b; font-size: 13px;">
-          <div style="font-size: 28px; margin-bottom: 8px;">👥</div>
-          Waiting for people to click the link...<br>
-          <span style="font-size: 11px; color: #475569;">When opened, their live pinpoint movement updates across 500km+ in real-time.</span>
+          <div style="font-size: 32px; margin-bottom: 8px;">📡</div>
+          Waiting for friends to open the link...<br>
+          <span style="font-size: 11px; color: #475569;">When opened, their live pinpoint movement streams across 500km+ in real-time.</span>
         </div>
 
         <div id="peopleList"></div>
@@ -419,7 +564,7 @@
 
   <div id="toast">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    <span id="toastMsg">Hyperlink copied!</span>
+    <span id="toastMsg">Link copied!</span>
   </div>
 
   <script>
@@ -546,28 +691,27 @@
       const color = p.color || colors[colorIdx++ % colors.length];
 
       const icon = L.divIcon({
-        className: 'custom-pin',
+        className: 'custom-pin-pulse',
         html: `
-          <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="background: ${color}; color: white; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: bold; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.6); white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+            <div style="background: linear-gradient(135deg, ${color}, #06b6d4); color: white; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.7); white-space: nowrap; display: flex; align-items: center; gap: 5px;">
               <span class="live-beacon"></span>
               <span>${escapeHtml(p.name || 'Friend')}</span>
             </div>
             <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid ${color};"></div>
           </div>
         `,
-        iconSize: [100, 36], iconAnchor: [50, 36]
+        iconSize: [0, 0]
       });
 
       const marker = L.marker([p.lat, p.lng], { icon: icon }).addTo(map);
 
-      // Tight Google-grade precision circle (3-5 meters)
       if (!accuracyCircles[p.id]) {
         accuracyCircles[p.id] = L.circle([p.lat, p.lng], {
           radius: 3.5,
           color: '#38bdf8',
           fillColor: '#38bdf8',
-          fillOpacity: 0.2,
+          fillOpacity: 0.25,
           weight: 1.5
         }).addTo(map);
       }
@@ -628,7 +772,7 @@
         }
 
         if (isNewFromNetwork) {
-          showToast(`${data.name || 'A person'} connected live!`);
+          showToast(`${data.name || 'A friend'} connected live!`);
         }
       } else {
         trackedPersons[pId].lat = data.lat;
@@ -682,7 +826,7 @@
     };
 
     window.clearAllPersons = function() {
-      if (confirm("Remove all persons and trails from this room map?")) {
+      if (confirm("Remove all targets and trails from this room map?")) {
         Object.values(trackedPersons).forEach(p => map.removeLayer(p.marker));
         Object.values(accuracyCircles).forEach(c => map.removeLayer(c));
         Object.values(movementPaths).forEach(line => map.removeLayer(line));
@@ -691,7 +835,7 @@
         for (let key in movementPaths) delete movementPaths[key];
         savePersonsToStorage();
         renderList();
-        showToast("All persons cleared from map.");
+        showToast("All targets cleared from map.");
       }
     };
 
@@ -702,7 +846,7 @@
       const people = Object.values(trackedPersons);
 
       document.getElementById('activeCount').innerText = people.length;
-      document.getElementById('countBadge').innerText = `${people.length} Active Persons`;
+      document.getElementById('countBadge').innerText = `${people.length} Active Targets`;
 
       if (people.length === 0) {
         empty.style.display = 'block';
