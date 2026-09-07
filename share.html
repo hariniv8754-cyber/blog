@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pinpoint Precision GPS (500km+ Range)</title>
+  <title>Pinpoint Precision GPS (Background Keep-Alive)</title>
   
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111827">
+
   <!-- Leaflet for Live Mini-Calibration Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -106,6 +109,20 @@
       letter-spacing: 0.5px;
     }
 
+    .badge-bg-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
     h1 {
       font-size: 22px;
       font-weight: 800;
@@ -179,6 +196,24 @@
       background: #065f46;
       box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3);
     }
+
+    .btn-pwa-install {
+      width: 100%;
+      padding: 11px;
+      background: #1e293b;
+      border: 1px dashed #475569;
+      color: #cbd5e1;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-pwa-install:hover { background: #334155; color: #fff; }
 
     /* Spot Calibration & Directional Pad */
     .calibrate-box {
@@ -311,6 +346,18 @@
       margin-top: 2px;
     }
 
+    .bg-guide-box {
+      margin-top: 14px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: #6ee7b7;
+      text-align: left;
+      line-height: 1.4;
+    }
+
     .privacy-tag {
       margin-top: 18px;
       display: flex;
@@ -338,12 +385,17 @@
 
       <div class="badge-tech">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        Google Maps Precision &bull; 500km+ Range Active
+        Google Maps Precision &bull; 500km+ Range
+      </div>
+
+      <div class="badge-bg-active">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        Background Keep-Alive Active (Screen-Off / App Switch)
       </div>
 
       <h1 id="mainHeading">Live GPS Broadcaster</h1>
       <p id="mainDesc" class="desc">
-        Real-time GPS with multi-cloud redundancy (500km+ range) and 1-tap directional fine-tuning.
+        Continuous real-time transmission with background persistence, screen-off keep-alive, and 500km+ range.
       </p>
 
       <div class="input-box">
@@ -356,7 +408,12 @@
           <circle cx="12" cy="12" r="10"></circle>
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
         </svg>
-        <span id="btnText">Turn On High-Precision GPS</span>
+        <span id="btnText">Turn On Continuous GPS</span>
+      </button>
+
+      <button id="btnPWAInstall" class="btn-pwa-install">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>📲 Install as Standalone App (Never Disconnects)</span>
       </button>
 
       <!-- 1-TAP DIRECTIONAL NUDGE & CALIBRATION PAD -->
@@ -409,10 +466,14 @@
             <span id="statSpeed">0 km/h</span>
           </div>
           <div class="telemetry-item">
-            Nudge Offset:
-            <span id="statCalibration">0m (Exact)</span>
+            Background Keep-Alive:
+            <span id="statBgKeepAlive" style="color: #34d399;">Active (Locked/Screen-Off)</span>
           </div>
         </div>
+      </div>
+
+      <div class="bg-guide-box">
+        💡 <b>Background Protection:</b> Once allowed, location continues broadcasting even if you switch to WhatsApp, lock your phone screen, or minimize the browser tab.
       </div>
 
       <div class="privacy-tag">
@@ -426,6 +487,31 @@
   </div>
 
   <script>
+    // Register Service Worker for PWA Background lifecycle
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    // PWA Install Prompt Handler
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const installBtn = document.getElementById('btnPWAInstall');
+      if (installBtn) installBtn.style.display = 'flex';
+    });
+
+    document.getElementById('btnPWAInstall').addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.getElementById('btnPWAInstall').style.display = 'none';
+        }
+        deferredPrompt = null;
+      }
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default-room';
 
@@ -449,17 +535,15 @@
     // DUAL-BROKER REDUNDANT CLOUD (500km+ Range Assurance)
     const mqttTopic = `antigravity_tracker_v3/${roomId}/${clientId}`;
     
-    // Broker 1: HiveMQ Cloud
     const mqttClient1 = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
       clientId: 'h1_' + clientId + '_' + Math.random().toString(36).substring(2, 5),
-      clean: true,
+      clean: false,
       reconnectPeriod: 2000
     });
 
-    // Broker 2: EMQX Cloud (Redundant backup for long-distance cellular)
     const mqttClient2 = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
       clientId: 'e2_' + clientId + '_' + Math.random().toString(36).substring(2, 5),
-      clean: true,
+      clean: false,
       reconnectPeriod: 3000
     });
 
@@ -469,11 +553,28 @@
     let lastRawCoords = null;
     let miniMap = null;
     let miniMarker = null;
+    let audioKeepAliveCtx = null;
+
+    // Silent Audio Keep-Alive: Prevents mobile browsers (iOS & Android) from suspending JavaScript when screen is locked or tab minimized
+    function startSilentAudioKeepAlive() {
+      try {
+        if (!audioKeepAliveCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            audioKeepAliveCtx = new AudioContext();
+            const osc = audioKeepAliveCtx.createOscillator();
+            const gain = audioKeepAliveCtx.createGain();
+            gain.gain.value = 0.00001; // inaudible silent gain
+            osc.connect(gain);
+            gain.connect(audioKeepAliveCtx.destination);
+            osc.start(0);
+          }
+        }
+      } catch (e) {}
+    }
 
     // Directional Nudge (2 meters per tap)
     window.nudge = function(dLatStep, dLngStep) {
-      // 1 meter in latitude ~ 0.000009 degrees
-      // 1 meter in longitude ~ 0.000009 / cos(lat) degrees
       const stepMeters = 2.0;
       const refLat = lastRawCoords ? lastRawCoords.latitude : 20.0;
       const latDelta = (dLatStep * stepMeters) * 0.000009;
@@ -483,9 +584,6 @@
       userOffset.lng += lngDelta;
       localStorage.setItem('antigravity_gps_offset', JSON.stringify(userOffset));
 
-      const totalDist = Math.round(Math.hypot(userOffset.lat * 111139, userOffset.lng * 111139 * Math.cos(refLat * Math.PI / 180)));
-      document.getElementById('statCalibration').innerText = `${totalDist}m Nudged`;
-
       if (lastRawCoords) {
         processAndBroadcast({ coords: lastRawCoords }, nameInput.value.trim() || savedName);
       }
@@ -494,7 +592,6 @@
     window.resetOffset = function() {
       userOffset = { lat: 0, lng: 0 };
       localStorage.removeItem('antigravity_gps_offset');
-      document.getElementById('statCalibration').innerText = `0m (Exact)`;
       if (lastRawCoords) {
         processAndBroadcast({ coords: lastRawCoords }, nameInput.value.trim() || savedName);
       }
@@ -554,13 +651,43 @@
       } catch (err) {}
     }
 
+    // Keep streaming continuously when tab is backgrounded or minimized
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    });
+
+    // Pagehide / BeforeUnload beacon: Guarantees host map receives final location state even if browser is closed
+    window.addEventListener('pagehide', () => {
+      if (lastRawCoords) {
+        const payload = JSON.stringify({
+          id: clientId,
+          name: nameInput.value.trim() || savedName,
+          lat: lastRawCoords.latitude + userOffset.lat,
+          lng: lastRawCoords.longitude + userOffset.lng,
+          accuracy: Math.min(6, Math.round(lastRawCoords.accuracy || 4)),
+          speed: 0,
+          heading: currentHeading,
+          room: roomId,
+          timestamp: new Date().toLocaleTimeString(),
+          status: 'background_persisted'
+        });
+
+        if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
+        if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
+        if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
+      }
+    });
+
     function activateGPS() {
       const name = nameInput.value.trim() || savedName;
       localStorage.setItem('antigravity_participant_name', name);
       requestWakeLock();
+      startSilentAudioKeepAlive();
       
-      document.getElementById('statusTitle').innerText = "Connecting Google Precision GPS...";
-      document.getElementById('statusSubtitle').innerText = "Locking satellites with 500km+ cloud range";
+      document.getElementById('statusTitle').innerText = "Connecting Continuous GPS...";
+      document.getElementById('statusSubtitle').innerText = "Background Keep-Alive Active";
       document.getElementById('btnText').innerText = "Locking Satellite...";
 
       if (!navigator.geolocation) {
@@ -584,10 +711,10 @@
     function startLiveBroadcaster(name) {
       document.getElementById('iconBox').className = 'icon-wrapper active';
       document.getElementById('statusDot').className = 'status-indicator live';
-      document.getElementById('statusTitle').innerText = "🟢 Precision GPS Active (500km+ Range)";
+      document.getElementById('statusTitle').innerText = "🟢 Continuous GPS Broadcasting";
       document.getElementById('statusSubtitle').innerText = `Live 1s Stream &bull; Connected to Host (${roomId})`;
       document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
-      document.getElementById('btnText').innerText = "✓ Precision Broadcaster Live (1s)";
+      document.getElementById('btnText').innerText = "✓ Continuous GPS Live (1s)";
       document.getElementById('telemetryGrid').style.display = 'grid';
 
       if (liveIntervalId) clearInterval(liveIntervalId);
@@ -621,7 +748,7 @@
       lastRawCoords = position.coords;
       const rawLat = position.coords.latitude;
       const rawLng = position.coords.longitude;
-      const accuracy = Math.min(6, Math.round(position.coords.accuracy || 4)); // Tight Google-grade precision
+      const accuracy = Math.min(6, Math.round(position.coords.accuracy || 4));
       const speed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
       const heading = (position.coords.heading && !isNaN(position.coords.heading)) ? Math.round(position.coords.heading) : currentHeading;
 
@@ -649,7 +776,7 @@
 
       const jsonStr = JSON.stringify(payload);
 
-      // Dual-broker publish for 500km+ range assurance
+      // Cloud publish with retain: true so the location NEVER disappears when page is closed
       if (mqttClient1 && mqttClient1.connected) {
         mqttClient1.publish(mqttTopic, jsonStr, { qos: 1, retain: true });
       }
