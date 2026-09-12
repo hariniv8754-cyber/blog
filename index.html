@@ -22,15 +22,15 @@
     }
 
     body {
-      background-color: #000000;
-      color: #f5f5f5;
+      background-color: #12071f;
+      color: #fdf2f8;
       min-height: 100vh;
       padding: 24px 16px;
       overflow-x: hidden;
       position: relative;
     }
 
-    /* Ambient Monochrome Background */
+    /* Ambient Background Effects */
     .bg-canvas {
       position: fixed;
       top: 0;
@@ -48,8 +48,8 @@
       right: -100px;
       width: 500px;
       height: 500px;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
-      filter: blur(60px);
+      background: radial-gradient(circle, rgba(244, 114, 182, 0.32) 0%, rgba(244, 114, 182, 0) 70%);
+      filter: blur(50px);
       animation: floatOrb 16s infinite alternate ease-in-out;
     }
 
@@ -59,7 +59,7 @@
       left: -100px;
       width: 550px;
       height: 550px;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(192, 132, 252, 0.28) 0%, rgba(192, 132, 252, 0) 70%);
       filter: blur(60px);
       animation: floatOrb 20s infinite alternate-reverse ease-in-out;
     }
@@ -78,17 +78,17 @@
     }
     
     header {
-      background: rgba(14, 14, 14, 0.9);
+      background: rgba(30, 16, 48, 0.75);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(244, 114, 182, 0.22);
       border-radius: 24px;
       padding: 18px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 30px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 25px rgba(244, 114, 182, 0.12);
       flex-wrap: wrap;
       gap: 16px;
       animation: fadeInDown 0.6s ease;
@@ -104,13 +104,13 @@
     .brand-icon {
       width: 50px;
       height: 50px;
-      background: #ffffff;
+      background: linear-gradient(135deg, #f472b6, #c084fc);
       border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #000000;
-      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
+      color: white;
+      box-shadow: 0 8px 25px rgba(244, 114, 182, 0.45);
       position: relative;
     }
 
@@ -119,7 +119,7 @@
       position: absolute;
       inset: -4px;
       border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 1px solid rgba(244, 114, 182, 0.45);
       animation: pulseBorder 2s infinite;
     }
 
@@ -132,11 +132,11 @@
       font-size: 20px;
       font-weight: 800;
       letter-spacing: -0.5px;
-      background: linear-gradient(180deg, #ffffff 40%, #a3a3a3 100%);
+      background: linear-gradient(135deg, #ffffff 20%, #fbcfe8 60%, #e9d5ff 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .brand p { font-size: 12px; color: #a3a3a3; }
+    .brand p { font-size: 12px; color: #d8b4fe; }
 
     .header-user-controls {
       display: flex;
@@ -144,24 +144,24 @@
       gap: 10px;
     }
     .user-pill {
-      background: #141414;
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(20, 10, 35, 0.7);
+      border: 1px solid rgba(244, 114, 182, 0.3);
       padding: 8px 16px;
       border-radius: 999px;
       font-size: 13px;
       font-weight: 600;
-      color: #e5e5e5;
+      color: #fbcfe8;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .user-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 0 10px #ffffff;
+      background: #f472b6;
+      box-shadow: 0 0 10px #f472b6;
       animation: blink 1.5s infinite;
     }
 
@@ -173,7 +173,7 @@
     .btn-logout {
       background: rgba(239, 68, 68, 0.12);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #f87171;
+      color: #fca5a5;
       padding: 8px 16px;
       border-radius: 999px;
       font-size: 13px;
@@ -192,14 +192,14 @@
 
     /* Create Room Card */
     .create-card {
-      background: rgba(14, 14, 14, 0.9);
+      background: rgba(30, 16, 48, 0.78);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(244, 114, 182, 0.25);
       border-radius: 24px;
       padding: 28px;
       margin-bottom: 36px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(244, 114, 182, 0.15);
       position: relative;
       animation: fadeInUp 0.7s ease;
     }
@@ -216,8 +216,8 @@
       left: 10px;
       width: 14px;
       height: 14px;
-      border-top: 2px solid #ffffff;
-      border-left: 2px solid #ffffff;
+      border-top: 2px solid #f472b6;
+      border-left: 2px solid #f472b6;
       border-top-left-radius: 8px;
     }
 
@@ -230,15 +230,15 @@
       align-items: center;
       gap: 8px;
     }
-    .create-desc { font-size: 13px; color: #a3a3a3; margin-bottom: 20px; }
+    .create-desc { font-size: 13px; color: #d8b4fe; margin-bottom: 20px; }
     
     .create-form { display: flex; gap: 12px; flex-wrap: wrap; }
     
     .input-room-name {
       flex: 1;
       min-width: 260px;
-      background: #080808;
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(20, 10, 35, 0.85);
+      border: 1px solid rgba(244, 114, 182, 0.25);
       border-radius: 14px;
       padding: 15px 18px;
       font-size: 15px;
@@ -247,32 +247,31 @@
       transition: all 0.25s;
     }
     .input-room-name:focus {
-      border-color: #ffffff;
-      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18), 0 0 20px rgba(255, 255, 255, 0.1);
-      background: #121212;
+      border-color: #f472b6;
+      box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.25), 0 0 20px rgba(192, 132, 252, 0.2);
+      background: rgba(25, 12, 45, 1);
     }
     
     .btn-create {
       padding: 15px 30px;
-      background: #ffffff;
-      color: #000000;
+      background: linear-gradient(135deg, #f472b6 0%, #c084fc 100%);
+      color: #ffffff;
       border: none;
       border-radius: 14px;
       font-size: 15px;
-      font-weight: 800;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
       transition: all 0.25s;
-      box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 25px rgba(244, 114, 182, 0.45);
       position: relative;
       overflow: hidden;
     }
     .btn-create:hover {
       transform: translateY(-2px);
-      background: #f0f0f0;
-      box-shadow: 0 14px 30px rgba(255, 255, 255, 0.35);
+      box-shadow: 0 14px 30px rgba(192, 132, 252, 0.55);
     }
     .btn-create:active { transform: scale(0.98); }
 
@@ -291,9 +290,9 @@
       gap: 10px;
     }
     .badge-count {
-      background: #171717;
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(244, 114, 182, 0.15);
+      color: #fbcfe8;
+      border: 1px solid rgba(244, 114, 182, 0.35);
       padding: 3px 12px;
       border-radius: 999px;
       font-size: 12px;
@@ -306,19 +305,19 @@
       gap: 20px;
     }
 
-    /* Monochrome Room Cards */
+    /* Room Cards */
     .room-card {
-      background: rgba(14, 14, 14, 0.85);
+      background: rgba(30, 16, 48, 0.75);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(244, 114, 182, 0.22);
       border-radius: 20px;
       padding: 22px;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       position: relative;
       overflow: hidden;
       animation: cardFadeIn 0.5s ease;
@@ -330,9 +329,9 @@
     }
 
     .room-card:hover {
-      border-color: rgba(255, 255, 255, 0.45);
+      border-color: rgba(244, 114, 182, 0.6);
       transform: translateY(-4px);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 255, 255, 0.1);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(244, 114, 182, 0.25);
     }
 
     .room-header {
@@ -344,10 +343,10 @@
     .room-name { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.3; }
     .room-id {
       font-size: 11px;
-      color: #ffffff;
+      color: #f472b6;
       font-family: monospace;
-      background: #171717;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(244, 114, 182, 0.12);
+      border: 1px solid rgba(244, 114, 182, 0.25);
       padding: 3px 8px;
       border-radius: 6px;
       margin-top: 5px;
@@ -357,7 +356,7 @@
     .btn-delete {
       background: none;
       border: none;
-      color: #737373;
+      color: #a78bfa;
       cursor: pointer;
       padding: 6px;
       border-radius: 8px;
@@ -370,7 +369,7 @@
 
     .room-meta {
       font-size: 12px;
-      color: #a3a3a3;
+      color: #d8b4fe;
       margin-bottom: 16px;
       display: flex;
       align-items: center;
@@ -381,30 +380,30 @@
     
     .btn-open {
       flex: 1;
-      background: #ffffff;
-      color: #000000;
+      background: linear-gradient(135deg, #f472b6, #c084fc);
+      color: #fff;
       text-decoration: none;
       padding: 11px 16px;
       border-radius: 12px;
       font-size: 13px;
-      font-weight: 800;
+      font-weight: 700;
       text-align: center;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
       transition: all 0.2s;
-      box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 6px 16px rgba(244, 114, 182, 0.4);
     }
     .btn-open:hover {
-      background: #f0f0f0;
+      background: linear-gradient(135deg, #ec4899, #a855f7);
       transform: translateY(-1px);
     }
     
     .btn-copy-card {
-      background: #171717;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      color: #ffffff;
+      background: rgba(45, 23, 70, 0.85);
+      border: 1px solid rgba(244, 114, 182, 0.25);
+      color: #fbcfe8;
       padding: 11px 14px;
       border-radius: 12px;
       font-size: 13px;
@@ -417,35 +416,36 @@
       transition: all 0.2s;
     }
     .btn-copy-card:hover {
-      background: #262626;
-      border-color: #ffffff;
+      background: rgba(60, 30, 90, 0.95);
+      color: #fff;
+      border-color: #f472b6;
     }
     .btn-copy-card.copied {
-      background: #ffffff;
-      color: #000000;
-      border-color: #ffffff;
+      background: rgba(244, 114, 182, 0.25);
+      color: #fbcfe8;
+      border-color: rgba(244, 114, 182, 0.6);
     }
 
     .empty-state {
       text-align: center;
       padding: 56px 20px;
-      background: rgba(14, 14, 14, 0.7);
-      border: 1px dashed rgba(255, 255, 255, 0.15);
+      background: rgba(30, 16, 48, 0.6);
+      border: 1px dashed rgba(244, 114, 182, 0.25);
       border-radius: 24px;
-      color: #737373;
+      color: #d8b4fe;
     }
 
     #toast {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #ffffff;
-      color: #000000;
+      background: linear-gradient(135deg, #f472b6, #c084fc);
+      color: #fff;
       padding: 14px 22px;
       border-radius: 14px;
       font-size: 14px;
-      font-weight: 800;
-      box-shadow: 0 12px 30px rgba(255, 255, 255, 0.3);
+      font-weight: 700;
+      box-shadow: 0 12px 30px rgba(244, 114, 182, 0.5);
       display: none;
       align-items: center;
       gap: 10px;
@@ -484,7 +484,7 @@
       <div class="header-user-controls">
         <div class="user-pill">
           <span class="user-dot"></span>
-          <span>Operator: <b id="displayUserId" style="color: #ffffff;">...</b></span>
+          <span>Operator: <b id="displayUserId" style="color: #38bdf8;">...</b></span>
         </div>
         <button class="btn-logout" onclick="logoutUser()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -499,7 +499,7 @@
 
     <div class="create-card">
       <div class="create-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="16"></line>
           <line x1="8" y1="12" x2="16" y2="12"></line>
@@ -734,13 +734,13 @@
 
             <div style="margin-bottom: 14px;">
               <input type="text" readonly value="${shareUrl}" onclick="this.select(); universalCopyText(this.value, 'Room link copied to clipboard!');"
-                style="width: 100%; background: #080808; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #ffffff; outline: none; font-family: monospace; cursor: pointer;"
+                style="width: 100%; background: rgba(9, 13, 24, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #38bdf8; outline: none; font-family: monospace; cursor: pointer;"
                 title="Tap to select and copy link">
             </div>
             
             <div class="room-meta">
               <span>📅 ${room.createdAt || 'Recently'}</span>
-              <span style="color: ${count > 0 ? '#ffffff' : '#737373'}; font-weight: 700;">👥 ${count} Saved Person${count === 1 ? '' : 's'}</span>
+              <span style="color: ${count > 0 ? '#34d399' : '#94a3b8'}; font-weight: 700;">👥 ${count} Saved Person${count === 1 ? '' : 's'}</span>
             </div>
           </div>
 
