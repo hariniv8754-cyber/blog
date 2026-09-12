@@ -43,30 +43,38 @@ jobs:
         working-directory: android-tracker-app
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build_err.log || true
+          ls -la app/build/outputs/apk/debug/ || echo "APK output dir not found"
 
       - name: Commit and Push APK to Repository
+        if: always()
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git checkout main
-          git pull origin main
-          cp android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ./QuantumGPS-Tracker.apk
-          git add -f QuantumGPS-Tracker.apk
-          git commit -m "Auto-compiled QuantumGPS-Tracker.apk [skip ci]" || echo "No changes"
+          git pull origin main --rebase || true
+          if [ -f android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ./QuantumGPS-Tracker.apk
+            git add -f QuantumGPS-Tracker.apk
+          fi
+          if [ -f build_err.log ]; then
+            git add -f build_err.log
+          fi
+          git commit -m "Auto-compiled QuantumGPS-Tracker.apk and logs [skip ci]" || echo "No changes"
           git push origin main || echo "Push failed"
 
       - name: Create GitHub Release and Upload APK
         uses: softprops/action-gh-release@v2
         if: always()
         with:
-          tag_name: v1.0.3
-          name: "Quantum GPS Tracker App v1.0.3"
+          tag_name: v1.0.4
+          name: "Quantum GPS Tracker App v1.0.4"
           body: "Official Android Native Background Location Tracker (.apk). Never stops transmitting even when swiped away or screen is locked."
           files: |
             android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
             QuantumGPS-Tracker.apk
+            build_err.log
           overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,4 +84,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: QuantumGPS-Tracker-APK
-          path: android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
+            build_err.log
