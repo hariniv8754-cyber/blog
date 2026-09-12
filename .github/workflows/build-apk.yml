@@ -22,13 +22,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build Android Debug APK
         run: |
           cd android-tracker-app
-          gradle assembleDebug --no-daemon
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -36,7 +39,7 @@ jobs:
           name: QuantumGPS-Tracker-APK
           path: android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Publish Direct Release APK
+      - name: Create GitHub Release and Upload APK
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
