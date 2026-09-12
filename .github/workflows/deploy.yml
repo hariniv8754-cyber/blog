@@ -28,9 +28,8 @@ jobs:
           gradle-version: '8.7'
 
       - name: Build Android Debug APK
+        working-directory: android-tracker-app
         run: |
-          cd android-tracker-app
-          gradle wrapper
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
