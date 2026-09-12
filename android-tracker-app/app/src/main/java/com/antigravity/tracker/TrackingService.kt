@@ -232,7 +232,7 @@ class TrackingService : Service() {
             if (mqttClient?.isConnected == true) mqttClient?.disconnect()
         } catch (e: Exception) {}
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopForeground(Service.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
