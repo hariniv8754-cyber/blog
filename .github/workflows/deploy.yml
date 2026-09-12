@@ -42,12 +42,12 @@ jobs:
 
       - name: Commit and Push APK to Repository
         run: |
-          cp android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ./QuantumGPS-Tracker.apk
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git checkout main
           git pull origin main
+          cp android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ./QuantumGPS-Tracker.apk
           git add -f QuantumGPS-Tracker.apk
           git commit -m "Auto-compiled QuantumGPS-Tracker.apk [skip ci]" || echo "No changes"
           git push origin main || echo "Push failed"
@@ -56,8 +56,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: always()
         with:
-          tag_name: v1.0.1
-          name: "Quantum GPS Tracker App v1.0.1"
+          tag_name: v1.0.2
+          name: "Quantum GPS Tracker App v1.0.2"
           body: "Official Android Native Background Location Tracker (.apk). Never stops transmitting even when swiped away or screen is locked."
           files: |
             android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
