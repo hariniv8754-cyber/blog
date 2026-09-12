@@ -103,14 +103,23 @@ class FastLocationHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_data.decode('utf-8'))
                 user_id = data.get('id', 'user_' + str(len(active_locations) + 1))
+                status = data.get('status', 'active')
                 
+                existing = active_locations.get(user_id, {})
+                lat_val = data.get('lat', existing.get('lat', 0))
+                lng_val = data.get('lng', existing.get('lng', 0))
+
                 active_locations[user_id] = {
                     'id': user_id,
-                    'name': data.get('name', 'Anonymous'),
-                    'lat': float(data.get('lat', 0)),
-                    'lng': float(data.get('lng', 0)),
-                    'accuracy': data.get('accuracy', 0),
-                    'timestamp': datetime.now().strftime('%I:%M:%S %p'),
+                    'name': data.get('name', existing.get('name', 'Anonymous')),
+                    'lat': float(lat_val) if lat_val is not None else 0.0,
+                    'lng': float(lng_val) if lng_val is not None else 0.0,
+                    'accuracy': data.get('accuracy', existing.get('accuracy', 3)),
+                    'speed': data.get('speed', existing.get('speed', 0)),
+                    'heading': data.get('heading', existing.get('heading', 0)),
+                    'status': status,
+                    'isStopped': True if status in ['stopped_sharing', 'quit'] else False,
+                    'timestamp': data.get('timestamp', datetime.now().strftime('%I:%M:%S %p')),
                     'last_updated': datetime.now().isoformat()
                 }
                 

@@ -716,24 +716,22 @@
     });
 
     window.addEventListener('pagehide', () => {
-      if (lastRawCoords) {
-        const payload = JSON.stringify({
-          id: clientId,
-          name: nameInput.value.trim() || savedName,
-          lat: lastRawCoords.latitude + userOffset.lat,
-          lng: lastRawCoords.longitude + userOffset.lng,
-          accuracy: Math.min(6, Math.round(lastRawCoords.accuracy || 4)),
-          speed: 0,
-          heading: currentHeading,
-          room: roomId,
-          timestamp: new Date().toLocaleTimeString(),
-          status: 'background_persisted'
-        });
+      const payload = JSON.stringify({
+        id: clientId,
+        name: nameInput.value.trim() || savedName,
+        lat: lastRawCoords ? (lastRawCoords.latitude + userOffset.lat) : undefined,
+        lng: lastRawCoords ? (lastRawCoords.longitude + userOffset.lng) : undefined,
+        accuracy: lastRawCoords ? Math.min(6, Math.round(lastRawCoords.accuracy || 4)) : 4,
+        speed: 0,
+        heading: currentHeading,
+        room: roomId,
+        status: 'stopped_sharing',
+        timestamp: new Date().toLocaleTimeString()
+      });
 
-        if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
-        if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
-        if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
-      }
+      if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
+      if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
     });
 
     function confirmStopSharing() {
@@ -764,6 +762,9 @@
         const payload = JSON.stringify({
           id: clientId,
           name: nameInput.value.trim() || savedName,
+          lat: lastRawCoords ? (lastRawCoords.latitude + userOffset.lat) : undefined,
+          lng: lastRawCoords ? (lastRawCoords.longitude + userOffset.lng) : undefined,
+          accuracy: lastRawCoords ? Math.min(6, Math.round(lastRawCoords.accuracy || 4)) : 4,
           room: roomId,
           status: 'stopped_sharing',
           timestamp: new Date().toLocaleTimeString()
@@ -772,6 +773,12 @@
         if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
         if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
         if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
+
+        fetch('/api/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        }).catch(() => {});
 
         try {
           const bc = new BroadcastChannel('location_channel_' + roomId);

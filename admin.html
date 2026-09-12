@@ -316,6 +316,11 @@
       100% { transform: scale(1.6); opacity: 0; }
     }
 
+    @keyframes pulseAlertBox {
+      from { transform: translateX(-50%) scale(1); box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4); }
+      to { transform: translateX(-50%) scale(1.02); box-shadow: 0 14px 40px rgba(239, 68, 68, 0.85); }
+    }
+
     .person-card {
       background: rgba(9, 13, 24, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -494,6 +499,16 @@
         </div>
       </div>
       <div class="map-frame">
+        <!-- FLOATING IN-MAP ALERT BANNER -->
+        <div id="mapFloatingAlert" style="display: none; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 2px solid #fecaca; border-radius: 14px; padding: 12px 20px; box-shadow: 0 10px 35px rgba(0,0,0,0.6), 0 0 25px rgba(239, 68, 68, 0.7); align-items: center; gap: 14px; max-width: 90%; animation: pulseAlertBox 1.2s infinite alternate;">
+          <span style="font-size: 26px;">🚨</span>
+          <div style="color: #fff; text-align: left;">
+            <div style="font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #fee2e2;">Live Disconnection Alert</div>
+            <div id="mapFloatingAlertText" style="font-size: 13px; font-weight: 700; color: #ffffff;">A person has STOPPED live location sharing!</div>
+          </div>
+          <button onclick="document.getElementById('mapFloatingAlert').style.display='none'" style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 6px;">Dismiss</button>
+        </div>
+
         <div id="map"></div>
       </div>
     </div>
@@ -699,20 +714,35 @@
     };
     L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
+    function getPinHtml(name, color, isStopped) {
+      if (isStopped) {
+        return `
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+            <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid #fecaca; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.7); white-space: nowrap; display: flex; align-items: center; gap: 5px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #fff; display: inline-block;"></span>
+              <span>${escapeHtml(name || 'Friend')} (🔴 STOPPED)</span>
+            </div>
+            <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #ef4444;"></div>
+          </div>
+        `;
+      }
+      return `
+        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+          <div style="background: linear-gradient(135deg, ${color}, #06b6d4); color: white; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.7); white-space: nowrap; display: flex; align-items: center; gap: 5px;">
+            <span class="live-beacon"></span>
+            <span>${escapeHtml(name || 'Friend')}</span>
+          </div>
+          <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid ${color};"></div>
+        </div>
+      `;
+    }
+
     function createMapPin(p) {
       const color = p.color || colors[colorIdx++ % colors.length];
 
       const icon = L.divIcon({
         className: 'custom-pin-pulse',
-        html: `
-          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
-            <div style="background: linear-gradient(135deg, ${color}, #06b6d4); color: white; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.7); white-space: nowrap; display: flex; align-items: center; gap: 5px;">
-              <span class="live-beacon"></span>
-              <span>${escapeHtml(p.name || 'Friend')}</span>
-            </div>
-            <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid ${color};"></div>
-          </div>
-        `,
+        html: getPinHtml(p.name, color, p.isStopped),
         iconSize: [0, 0]
       });
 
@@ -738,6 +768,16 @@
       }
 
       return { marker, color };
+    }
+
+    function updateMarkerStatus(p) {
+      if (p && p.marker) {
+        p.marker.setIcon(L.divIcon({
+          className: 'custom-pin-pulse',
+          html: getPinHtml(p.name, p.color, p.isStopped),
+          iconSize: [0, 0]
+        }));
+      }
     }
 
     function restoreSavedData() {
@@ -768,35 +808,69 @@
     };
 
     // Synthesized Audio Beep Alert (Zero external file dependencies)
+    let audioCtx = null;
+    function initAudioContext() {
+      try {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            audioCtx = new AudioContext();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) {}
+    }
+
+    document.addEventListener('click', initAudioContext, { once: false });
+    document.addEventListener('touchstart', initAudioContext, { once: false });
+
     function playAlertSound() {
       try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          const ctx = new AudioContext();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(440, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
-          osc.frequency.exponentialRampToValueAtTime(330, ctx.currentTime + 0.28);
-          gain.gain.setValueAtTime(0.35, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.35);
-        }
+        initAudioContext();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(440, now + 0.12);
+        osc.frequency.setValueAtTime(880, now + 0.25);
+        osc.frequency.setValueAtTime(330, now + 0.38);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.55);
       } catch (e) {}
     }
 
     function showHostAlert(msg) {
       playAlertSound();
+
+      // Top Banner
       const banner = document.getElementById('hostLiveAlertBanner');
       if (banner) {
         document.getElementById('hostAlertText').innerText = msg;
         banner.style.display = 'flex';
-        setTimeout(() => { banner.style.display = 'none'; }, 8000);
       }
+
+      // In-Map Floating Alert Overlay
+      const mapAlert = document.getElementById('mapFloatingAlert');
+      if (mapAlert) {
+        document.getElementById('mapFloatingAlertText').innerText = msg;
+        mapAlert.style.display = 'flex';
+        if (window.mapAlertTimer) clearTimeout(window.mapAlertTimer);
+        window.mapAlertTimer = setTimeout(() => {
+          mapAlert.style.display = 'none';
+        }, 10000);
+      }
+
       showToast(msg);
     }
 
@@ -805,15 +879,27 @@
 
       const pId = data.id || ('user_' + String(data.name || 'friend').replace(/\s+/g, '_'));
 
-      // Handle STOPPED SHARING alert from friend
+      // Handle STOPPED SHARING / QUIT alert from friend
       if (data.status === 'stopped_sharing' || data.status === 'quit') {
-        if (trackedPersons[pId]) {
-          trackedPersons[pId].isStopped = true;
-          trackedPersons[pId].status = 'stopped_sharing';
-          trackedPersons[pId].timestamp = data.timestamp || new Date().toLocaleTimeString();
+        let person = trackedPersons[pId];
+        if (!person && data.name) {
+          person = Object.values(trackedPersons).find(p => p.name === data.name);
+        }
+
+        if (person) {
+          const wasActive = !person.isStopped;
+          person.isStopped = true;
+          person.status = 'stopped_sharing';
+          person.timestamp = data.timestamp || new Date().toLocaleTimeString();
+          updateMarkerStatus(person);
           savePersonsToStorage();
           renderList();
-          showHostAlert(`⚠️ ALERT: "${trackedPersons[pId].name || 'Friend'}" has STOPPED live location sharing!`);
+
+          if (wasActive) {
+            showHostAlert(`🚨 Live Disconnection Alert: "${person.name || 'Friend'}" has STOPPED live location sharing!`);
+          }
+        } else {
+          showHostAlert(`🚨 Live Disconnection Alert: "${data.name || 'Friend'}" has STOPPED live location sharing!`);
         }
         return;
       }
@@ -835,16 +921,24 @@
           showToast(`${data.name || 'A friend'} connected live!`);
         }
       } else {
-        trackedPersons[pId].lat = data.lat;
-        trackedPersons[pId].lng = data.lng;
-        trackedPersons[pId].speed = data.speed || 0;
-        trackedPersons[pId].accuracy = data.accuracy || 3;
-        trackedPersons[pId].name = data.name || trackedPersons[pId].name;
-        trackedPersons[pId].timestamp = data.timestamp || new Date().toLocaleTimeString();
-        trackedPersons[pId].lastSeen = Date.now();
-        trackedPersons[pId].isStopped = false;
+        const person = trackedPersons[pId];
+        const wasStopped = person.isStopped;
 
-        trackedPersons[pId].marker.setLatLng(newLatLng);
+        person.lat = data.lat;
+        person.lng = data.lng;
+        person.speed = data.speed || 0;
+        person.accuracy = data.accuracy || 3;
+        person.name = data.name || person.name;
+        person.timestamp = data.timestamp || new Date().toLocaleTimeString();
+        person.lastSeen = Date.now();
+        person.isStopped = false;
+        person.status = 'active';
+
+        person.marker.setLatLng(newLatLng);
+        if (wasStopped) {
+          updateMarkerStatus(person);
+          showToast(`🟢 "${person.name}" resumed live location sharing!`);
+        }
 
         if (accuracyCircles[pId]) {
           accuracyCircles[pId].setLatLng(newLatLng);
@@ -858,6 +952,28 @@
       savePersonsToStorage();
       renderList();
     }
+
+    // REAL-TIME INACTIVITY WATCHDOG
+    // Detects when any participant stops transmitting (closed browser, phone killed, signal drop)
+    setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+
+      Object.values(trackedPersons).forEach(person => {
+        if (!person.isStopped && person.lastSeen && (now - person.lastSeen > 8000)) {
+          person.isStopped = true;
+          person.status = 'stopped_sharing';
+          updateMarkerStatus(person);
+          changed = true;
+          showHostAlert(`🚨 Live Disconnection Alert: "${person.name || 'Friend'}" has STOPPED transmitting live location! (Last seen: ${person.timestamp || 'recently'})`);
+        }
+      });
+
+      if (changed) {
+        savePersonsToStorage();
+        renderList();
+      }
+    }, 2000);
 
     window.removePerson = function(pId) {
       const person = trackedPersons[pId];
