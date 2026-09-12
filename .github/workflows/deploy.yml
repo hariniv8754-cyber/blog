@@ -1,15 +1,24 @@
-name: Build Quantum GPS Android APK
+name: Build APK and Deploy Quantum GPS
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
@@ -32,38 +41,33 @@ jobs:
           cd android-tracker-app
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace > ../build_log.txt 2>&1 || true
+          ./gradlew assembleDebug --no-daemon --stacktrace
           cd ..
           if [ -f "android-tracker-app/app/build/outputs/apk/debug/app-debug.apk" ]; then
             cp android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ./QuantumGPS-Tracker.apk
-            echo "APK built successfully!"
-          else
-            echo "APK build failed! Log attached to build_log.txt"
+            echo "SUCCESS: APK copied to root!"
           fi
 
-      - name: Deploy to GitHub Pages Branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages
-          force_orphan: true
-
-      - name: Upload APK Artifact
-        if: hashFiles('android-tracker-app/app/build/outputs/apk/debug/app-debug.apk') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: QuantumGPS-Tracker-APK
-          path: android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
-
       - name: Create GitHub Release and Upload APK
-        if: hashFiles('android-tracker-app/app/build/outputs/apk/debug/app-debug.apk') != ''
         uses: softprops/action-gh-release@v2
+        if: hashFiles('QuantumGPS-Tracker.apk') != ''
         with:
           tag_name: v1.0.0
           name: "Quantum GPS Tracker App v1.0.0"
           body: "Official Android Native Background Location Tracker (.apk). Never stops transmitting even when swiped away or screen is locked."
-          files: android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
+          files: QuantumGPS-Tracker.apk
           overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
