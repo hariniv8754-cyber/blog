@@ -43,7 +43,7 @@ jobs:
         working-directory: android-tracker-app
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build_err.log || true
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build_err.log
           ls -la app/build/outputs/apk/debug/ || echo "APK output dir not found"
 
       - name: Commit and Push APK to Repository
@@ -68,8 +68,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: always()
         with:
-          tag_name: v1.0.4
-          name: "Quantum GPS Tracker App v1.0.4"
+          tag_name: v1.0.5
+          name: "Quantum GPS Tracker App v1.0.5"
           body: "Official Android Native Background Location Tracker (.apk). Never stops transmitting even when swiped away or screen is locked."
           files: |
             android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
