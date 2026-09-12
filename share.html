@@ -720,7 +720,7 @@
       }
     });
 
-    window.addEventListener('pagehide', () => {
+    function notifyHostStopOrError(status, reason) {
       const payload = JSON.stringify({
         id: clientId,
         name: nameInput.value.trim() || savedName,
@@ -730,22 +730,42 @@
         speed: 0,
         heading: currentHeading,
         room: roomId,
-        status: 'stopped_sharing',
+        status: status, // 'stopped_sharing' or 'error'
+        reason: reason,
         timestamp: new Date().toLocaleTimeString()
       });
 
       if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
       if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
       if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
+
+      fetch('/api/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      }).catch(() => {});
+
+      try {
+        const bc = new BroadcastChannel('location_channel_' + roomId);
+        bc.postMessage(JSON.parse(payload));
+      } catch (e) {}
+    }
+
+    window.addEventListener('pagehide', () => {
+      notifyHostStopOrError('stopped_sharing', 'Page Closed / Navigated Away');
+    });
+
+    window.addEventListener('offline', () => {
+      notifyHostStopOrError('stopped_sharing', 'Network Dropped (Device went offline)');
     });
 
     function confirmStopSharing() {
       if (confirm("⚠️ Are you sure you want to stop live sharing? The room creator will be notified immediately.")) {
-        stopBroadcasting(true);
+        stopBroadcasting('Manual Stop (Clicked Stop Sharing button)', true);
       }
     }
 
-    function stopBroadcasting(notifyHost = true) {
+    function stopBroadcasting(reason = 'Manual Stop (Clicked Stop Sharing button)', notifyHost = true) {
       if (liveIntervalId) clearInterval(liveIntervalId);
       if (workerTimer) {
         try { workerTimer.postMessage('stop'); } catch(e){}
@@ -764,32 +784,20 @@
       if (stopBtn) stopBtn.style.display = 'none';
 
       if (notifyHost) {
-        const payload = JSON.stringify({
-          id: clientId,
-          name: nameInput.value.trim() || savedName,
-          lat: lastRawCoords ? (lastRawCoords.latitude + userOffset.lat) : undefined,
-          lng: lastRawCoords ? (lastRawCoords.longitude + userOffset.lng) : undefined,
-          accuracy: lastRawCoords ? Math.min(6, Math.round(lastRawCoords.accuracy || 4)) : 4,
-          room: roomId,
-          status: 'stopped_sharing',
-          timestamp: new Date().toLocaleTimeString()
-        });
-
-        if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
-        if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
-        if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
-
-        fetch('/api/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload
-        }).catch(() => {});
-
-        try {
-          const bc = new BroadcastChannel('location_channel_' + roomId);
-          bc.postMessage(JSON.parse(payload));
-        } catch (e) {}
+        notifyHostStopOrError('stopped_sharing', reason);
       }
+    }
+
+    function handleGPSError(err) {
+      let msg = 'Unexpected GPS Signal Error';
+      if (err) {
+        if (err.code === 1) msg = 'GPS Permission Denied by User/Device';
+        else if (err.code === 2) msg = 'GPS Satellite Signal Unavailable';
+        else if (err.code === 3) msg = 'GPS Satellite Lock Timed Out';
+        else if (err.message) msg = `GPS Error: ${err.message}`;
+      }
+      notifyHostStopOrError('stopped_sharing', msg);
+      showError(msg);
     }
 
     function activateGPS() {
@@ -803,7 +811,7 @@
       document.getElementById('btnText').innerText = "Locking Satellite...";
 
       if (!navigator.geolocation) {
-        showError("Geolocation is not supported by your browser.");
+        handleGPSError({ code: 2, message: "Geolocation not supported" });
         return;
       }
 
@@ -812,7 +820,7 @@
         (error) => {
           navigator.geolocation.getCurrentPosition(
             (pos2) => startLiveBroadcaster(name),
-            (error2) => showError("Please enable 'Precise Location' in browser settings and tap again."),
+            (error2) => handleGPSError(error2 || error),
             { enableHighAccuracy: false, timeout: 6000 }
           );
         },
@@ -843,7 +851,7 @@
           (err) => {
             navigator.geolocation.getCurrentPosition(
               (pos2) => processAndBroadcast(pos2, name),
-              null,
+              (err2) => handleGPSError(err2 || err),
               { enableHighAccuracy: false, maximumAge: 0, timeout: 1500 }
             );
           },
@@ -856,7 +864,7 @@
 
       watchPositionId = navigator.geolocation.watchPosition(
         (pos) => processAndBroadcast(pos, name),
-        null,
+        (err) => handleGPSError(err),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 }
       );
     }
@@ -888,6 +896,8 @@
         speed: speed,
         heading: heading,
         room: roomId,
+        status: 'active',
+        reason: 'Active Live Stream',
         timestamp: new Date().toLocaleTimeString()
       };
 

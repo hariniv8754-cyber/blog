@@ -644,7 +644,10 @@
           speed: p.speed || 0,
           heading: p.heading || 0,
           timestamp: p.timestamp,
-          color: p.color
+          color: p.color,
+          status: p.status,
+          isStopped: p.isStopped,
+          stopReason: p.stopReason
         };
       });
       localStorage.setItem(STORAGE_ROOM_PEOPLE_KEY, JSON.stringify(dataToSave));
@@ -715,15 +718,29 @@
     };
     L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
-    function getPinHtml(name, color, isStopped) {
+    function getPinHtml(name, color, isStopped, stopReason = '') {
       if (isStopped) {
+        const isManual = (stopReason || '').toLowerCase().includes('click') || (stopReason || '').toLowerCase().includes('manual');
+        const badgeBg = isManual
+          ? 'linear-gradient(135deg, #ef4444, #b91c1c)'
+          : 'linear-gradient(135deg, #f59e0b, #b45309)';
+        const borderColor = isManual ? '#fecaca' : '#fef3c7';
+        const shadowColor = isManual ? 'rgba(239, 68, 68, 0.7)' : 'rgba(245, 158, 11, 0.7)';
+        const pointerColor = isManual ? '#ef4444' : '#f59e0b';
+        
+        let label = '🔴 STOPPED (Clicked Stop)';
+        if (!isManual) {
+          const shortReason = stopReason && stopReason.length > 20 ? stopReason.substring(0, 18) + '...' : (stopReason || 'Signal Lost');
+          label = `⚠️ LOST: ${escapeHtml(shortReason)}`;
+        }
+
         return `
           <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
-            <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid #fecaca; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.7); white-space: nowrap; display: flex; align-items: center; gap: 5px;">
+            <div style="background: ${badgeBg}; color: white; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid ${borderColor}; box-shadow: 0 4px 15px ${shadowColor}; white-space: nowrap; display: flex; align-items: center; gap: 5px;">
               <span style="width: 8px; height: 8px; border-radius: 50%; background: #fff; display: inline-block;"></span>
-              <span>${escapeHtml(name || 'Friend')} (🔴 STOPPED)</span>
+              <span>${escapeHtml(name || 'Friend')} (${label})</span>
             </div>
-            <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #ef4444;"></div>
+            <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid ${pointerColor};"></div>
           </div>
         `;
       }
@@ -743,7 +760,7 @@
 
       const icon = L.divIcon({
         className: 'custom-pin-pulse',
-        html: getPinHtml(p.name, color, p.isStopped),
+        html: getPinHtml(p.name, color, p.isStopped, p.stopReason),
         iconSize: [0, 0]
       });
 
@@ -775,7 +792,7 @@
       if (p && p.marker) {
         p.marker.setIcon(L.divIcon({
           className: 'custom-pin-pulse',
-          html: getPinHtml(p.name, p.color, p.isStopped),
+          html: getPinHtml(p.name, p.color, p.isStopped, p.stopReason),
           iconSize: [0, 0]
         }));
       }
@@ -851,13 +868,32 @@
       } catch (e) {}
     }
 
-    function showHostAlert(msg) {
+    function showHostAlert(msg, reasonType = 'info') {
       playAlertSound();
+
+      const isManual = reasonType === 'manual' || msg.toLowerCase().includes('clicked stop') || msg.toLowerCase().includes('manually');
 
       // Top Banner
       const banner = document.getElementById('hostLiveAlertBanner');
       if (banner) {
         document.getElementById('hostAlertText').innerText = msg;
+        if (isManual) {
+          banner.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.35))';
+          banner.style.borderColor = '#ef4444';
+          const titleEl = banner.querySelector('b');
+          if (titleEl) {
+            titleEl.style.color = '#fca5a5';
+            titleEl.innerText = '🛑 LIVE STOP ALERT (MANUAL)';
+          }
+        } else {
+          banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(180, 83, 9, 0.35))';
+          banner.style.borderColor = '#f59e0b';
+          const titleEl = banner.querySelector('b');
+          if (titleEl) {
+            titleEl.style.color = '#fde68a';
+            titleEl.innerText = '⚠️ LIVE DISCONNECTION ALERT (UNEXPECTED ERROR)';
+          }
+        }
         banner.style.display = 'flex';
       }
 
@@ -865,6 +901,22 @@
       const mapAlert = document.getElementById('mapFloatingAlert');
       if (mapAlert) {
         document.getElementById('mapFloatingAlertText').innerText = msg;
+        const titleEl = mapAlert.querySelector('div > div:first-child');
+        if (isManual) {
+          mapAlert.style.background = 'rgba(220, 38, 38, 0.95)';
+          mapAlert.style.borderColor = '#fecaca';
+          if (titleEl) {
+            titleEl.innerText = '🛑 Live Manual Stop';
+            titleEl.style.color = '#fee2e2';
+          }
+        } else {
+          mapAlert.style.background = 'rgba(217, 119, 6, 0.95)';
+          mapAlert.style.borderColor = '#fef3c7';
+          if (titleEl) {
+            titleEl.innerText = '⚠️ Unexpected Disconnection / Error';
+            titleEl.style.color = '#fef3c7';
+          }
+        }
         mapAlert.style.display = 'flex';
         if (window.mapAlertTimer) clearTimeout(window.mapAlertTimer);
         window.mapAlertTimer = setTimeout(() => {
@@ -880,27 +932,39 @@
 
       const pId = data.id || ('user_' + String(data.name || 'friend').replace(/\s+/g, '_'));
 
-      // Handle STOPPED SHARING / QUIT alert from friend
-      if (data.status === 'stopped_sharing' || data.status === 'quit') {
+      // Handle STOPPED SHARING / QUIT / ERROR alert from friend
+      if (data.status === 'stopped_sharing' || data.status === 'quit' || data.status === 'error') {
         let person = trackedPersons[pId];
         if (!person && data.name) {
           person = Object.values(trackedPersons).find(p => p.name === data.name);
         }
 
+        const reason = data.reason || (data.status === 'error' ? 'Unexpected GPS Error' : 'Manual Stop (Clicked Stop Sharing button)');
+        const isManual = reason.toLowerCase().includes('click') || reason.toLowerCase().includes('manual');
+
         if (person) {
           const wasActive = !person.isStopped;
           person.isStopped = true;
-          person.status = 'stopped_sharing';
+          person.status = data.status;
+          person.stopReason = reason;
           person.timestamp = data.timestamp || new Date().toLocaleTimeString();
           updateMarkerStatus(person);
           savePersonsToStorage();
           renderList();
 
           if (wasActive) {
-            showHostAlert(`🚨 Live Disconnection Alert: "${person.name || 'Friend'}" has STOPPED live location sharing!`);
+            if (isManual) {
+              showHostAlert(`🛑 Live Alert: "${person.name || 'Friend'}" manually clicked Stop Sharing!`, 'manual');
+            } else {
+              showHostAlert(`⚠️ Live Alert: "${person.name || 'Friend'}" stopped due to unexpected error: ${reason}`, 'error');
+            }
           }
         } else {
-          showHostAlert(`🚨 Live Disconnection Alert: "${data.name || 'Friend'}" has STOPPED live location sharing!`);
+          if (isManual) {
+            showHostAlert(`🛑 Live Alert: "${data.name || 'Friend'}" manually clicked Stop Sharing!`, 'manual');
+          } else {
+            showHostAlert(`⚠️ Live Alert: "${data.name || 'Friend'}" disconnected: ${reason}`, 'error');
+          }
         }
         return;
       }
@@ -910,7 +974,7 @@
       
       if (!trackedPersons[pId]) {
         const { marker, color } = createMapPin(data);
-        trackedPersons[pId] = { ...data, id: pId, marker, color, lastSeen: Date.now(), isStopped: false };
+        trackedPersons[pId] = { ...data, id: pId, marker, color, lastSeen: Date.now(), isStopped: false, status: 'active', stopReason: null };
 
         if (Object.keys(trackedPersons).length === 1) {
           map.setView(newLatLng, 19);
@@ -934,6 +998,7 @@
         person.lastSeen = Date.now();
         person.isStopped = false;
         person.status = 'active';
+        person.stopReason = null;
 
         person.marker.setLatLng(newLatLng);
         if (wasStopped) {
@@ -964,9 +1029,10 @@
         if (!person.isStopped && person.lastSeen && (now - person.lastSeen > 8000)) {
           person.isStopped = true;
           person.status = 'stopped_sharing';
+          person.stopReason = 'Unexpected Disconnection / Signal Lost (No transmission for 8s)';
           updateMarkerStatus(person);
           changed = true;
-          showHostAlert(`🚨 Live Disconnection Alert: "${person.name || 'Friend'}" has STOPPED transmitting live location! (Last seen: ${person.timestamp || 'recently'})`);
+          showHostAlert(`⚠️ Live Alert: "${person.name || 'Friend'}" stopped transmitting unexpectedly (Signal lost / No transmission for 8s)! (Last seen: ${person.timestamp || 'recently'})`, 'error');
         }
       });
 
@@ -1042,18 +1108,28 @@
         const isRecentlyActive = p.lastSeen && (Date.now() - p.lastSeen < 4000);
         
         let statusBadge = '';
-        if (p.isStopped || p.status === 'stopped_sharing') {
-          statusBadge = `<span style="font-size: 11px; color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.15); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.3);">🔴 Stopped Sharing (${p.timestamp || 'Recent'})</span>`;
+        let isManual = false;
+        if (p.isStopped || p.status === 'stopped_sharing' || p.status === 'error') {
+          isManual = (p.stopReason || '').toLowerCase().includes('click') || (p.stopReason || '').toLowerCase().includes('manual');
+          if (isManual) {
+            statusBadge = `<span style="font-size: 11px; color: #f87171; font-weight: bold; background: rgba(239, 68, 68, 0.18); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.4); white-space: nowrap;">🔴 Stopped: Clicked Stop (${p.timestamp || 'Recent'})</span>`;
+          } else {
+            statusBadge = `<span style="font-size: 11px; color: #fbbf24; font-weight: bold; background: rgba(245, 158, 11, 0.18); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.4); white-space: nowrap;">⚠️ Disconnected: ${escapeHtml(p.stopReason ? (p.stopReason.length > 20 ? p.stopReason.substring(0, 18) + '...' : p.stopReason) : 'Unexpected Error')} (${p.timestamp || 'Recent'})</span>`;
+          }
         } else if (isRecentlyActive) {
           statusBadge = `<span style="font-size: 11px; color: #34d399; font-weight: bold;"><span class="live-beacon"></span>Live (1s)</span>`;
         } else {
           statusBadge = `<span style="font-size: 11px; color: #9ca3af;">📍 Last: ${p.timestamp || 'Saved'}</span>`;
         }
 
+        const stateDetailText = p.isStopped
+          ? (isManual ? `<b style="color: #f87171;">Manual Stop (Clicked button)</b>` : `<b style="color: #fbbf24;">${escapeHtml(p.stopReason || 'Unexpected Error')}</b>`)
+          : `<b style="color: #34d399;">Active Live Stream</b>`;
+
         const card = document.createElement('div');
         card.className = 'person-card';
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 6px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="width: 10px; height: 10px; border-radius: 50%; background: ${p.color}; display: inline-block;"></span>
               <b style="color: #fff; font-size: 14px;">${escapeHtml(p.name || 'Friend')}</b>
@@ -1061,11 +1137,15 @@
             ${statusBadge}
           </div>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; color: #94a3b8; margin-bottom: 8px; font-family: monospace;">
-            <span>Precision: <b style="color: #38bdf8;">±2m (Tight)</b></span>
-            <span>Speed: <b style="color: #38bdf8;">${p.speed || 0} km/h</b></span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-family: monospace;">
+            <span>Precision: <b style="color: #f472b6;">±2m (Tight)</b></span>
+            <span>Speed: <b style="color: #c084fc;">${p.speed || 0} km/h</b></span>
             <span>Lat: ${Number(p.lat).toFixed(6)}</span>
             <span>Lng: ${Number(p.lng).toFixed(6)}</span>
+          </div>
+
+          <div style="font-size: 11px; margin-bottom: 8px; color: #d8b4fe; background: rgba(20, 10, 35, 0.6); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(244, 114, 182, 0.15);">
+            Status: ${stateDetailText}
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">

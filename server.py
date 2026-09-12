@@ -118,7 +118,8 @@ class FastLocationHandler(http.server.SimpleHTTPRequestHandler):
                     'speed': data.get('speed', existing.get('speed', 0)),
                     'heading': data.get('heading', existing.get('heading', 0)),
                     'status': status,
-                    'isStopped': True if status in ['stopped_sharing', 'quit'] else False,
+                    'reason': data.get('reason', existing.get('reason', 'Manual Stop' if status in ['stopped_sharing', 'quit'] else 'Active')),
+                    'isStopped': True if status in ['stopped_sharing', 'quit', 'error'] else False,
                     'timestamp': data.get('timestamp', datetime.now().strftime('%I:%M:%S %p')),
                     'last_updated': datetime.now().isoformat()
                 }
