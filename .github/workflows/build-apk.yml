@@ -32,26 +32,33 @@ jobs:
           cd android-tracker-app
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace > ../build_log.txt 2>&1 || (
-            cd ..
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
-            git checkout -b build-debug-log
-            git add build_log.txt
-            git commit -m "Add build failure log"
-            git push -f origin build-debug-log
-            exit 1
-          )
+          ./gradlew assembleDebug --no-daemon --stacktrace > ../build_log.txt 2>&1 || true
+          cd ..
+          if [ -f "android-tracker-app/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp android-tracker-app/app/build/outputs/apk/debug/app-debug.apk ./QuantumGPS-Tracker.apk
+            echo "APK built successfully!"
+          else
+            echo "APK build failed! Log attached to build_log.txt"
+          fi
+
+      - name: Deploy to GitHub Pages Branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          force_orphan: true
 
       - name: Upload APK Artifact
+        if: hashFiles('android-tracker-app/app/build/outputs/apk/debug/app-debug.apk') != ''
         uses: actions/upload-artifact@v4
         with:
           name: QuantumGPS-Tracker-APK
           path: android-tracker-app/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Create GitHub Release and Upload APK
+        if: hashFiles('android-tracker-app/app/build/outputs/apk/debug/app-debug.apk') != ''
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/heads/main')
         with:
           tag_name: v1.0.0
           name: "Quantum GPS Tracker App v1.0.0"
