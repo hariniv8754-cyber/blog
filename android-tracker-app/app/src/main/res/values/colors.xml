@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="cyber_cyan">#38BDF8</color>
+    <color name="cyber_blue">#4F46E5</color>
+    <color name="emerald_green">#10B981</color>
+    <color name="red_danger">#EF4444</color>
+    <color name="bg_dark">#060913</color>
+    <color name="card_dark">#0D1323</color>
+</resources>
