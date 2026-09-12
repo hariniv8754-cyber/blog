@@ -431,13 +431,18 @@
         <input id="userNameInput" type="text" class="name-input" placeholder="e.g. John, Sarah, Friend">
       </div>
 
-      <button id="btnTurnOnGPS" class="btn-gps">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-        </svg>
-        <span id="btnText">Turn On Continuous GPS</span>
-      </button>
+      <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+        <button id="btnTurnOnGPS" class="btn-gps" style="flex: 1;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+          <span id="btnText">Turn On Continuous GPS</span>
+        </button>
+        <button id="btnStopGPS" onclick="confirmStopSharing()" style="display: none; background: rgba(239, 68, 68, 0.2); border: 1.5px solid #ef4444; color: #f87171; border-radius: 16px; padding: 0 16px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s;">
+          🛑 Stop
+        </button>
+      </div>
 
       <button id="btnPWAInstall" class="btn-pwa-install">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -731,6 +736,50 @@
       }
     });
 
+    function confirmStopSharing() {
+      if (confirm("⚠️ Are you sure you want to stop live sharing? The room creator will be notified immediately.")) {
+        stopBroadcasting(true);
+      }
+    }
+
+    function stopBroadcasting(notifyHost = true) {
+      if (liveIntervalId) clearInterval(liveIntervalId);
+      if (workerTimer) {
+        try { workerTimer.postMessage('stop'); } catch(e){}
+      }
+      if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
+      liveIntervalId = null;
+      watchPositionId = null;
+
+      document.getElementById('iconBox').className = 'icon-wrapper';
+      document.getElementById('statusDot').className = 'status-indicator';
+      document.getElementById('statusTitle').innerText = "🔴 Sharing Stopped";
+      document.getElementById('statusSubtitle').innerText = "Location transmission paused (Host alerted)";
+      document.getElementById('btnTurnOnGPS').className = 'btn-gps';
+      document.getElementById('btnText').innerText = "Resume Continuous GPS";
+      const stopBtn = document.getElementById('btnStopGPS');
+      if (stopBtn) stopBtn.style.display = 'none';
+
+      if (notifyHost) {
+        const payload = JSON.stringify({
+          id: clientId,
+          name: nameInput.value.trim() || savedName,
+          room: roomId,
+          status: 'stopped_sharing',
+          timestamp: new Date().toLocaleTimeString()
+        });
+
+        if (mqttClient1 && mqttClient1.connected) mqttClient1.publish(mqttTopic, payload, { qos: 1, retain: true });
+        if (mqttClient2 && mqttClient2.connected) mqttClient2.publish(mqttTopic, payload, { qos: 1, retain: true });
+        if (navigator.sendBeacon) navigator.sendBeacon('/api/update', payload);
+
+        try {
+          const bc = new BroadcastChannel('location_channel_' + roomId);
+          bc.postMessage(JSON.parse(payload));
+        } catch (e) {}
+      }
+    }
+
     function activateGPS() {
       const name = nameInput.value.trim() || savedName;
       localStorage.setItem('antigravity_participant_name', name);
@@ -763,13 +812,17 @@
       document.getElementById('iconBox').className = 'icon-wrapper active';
       document.getElementById('statusDot').className = 'status-indicator live';
       document.getElementById('statusTitle').innerText = "🟢 Continuous GPS Broadcasting";
-      document.getElementById('statusSubtitle').innerText = `Live 1s Stream &bull; Connected to Room (${roomId})`;
+      document.getElementById('statusSubtitle').innerText = `Live 1s Stream • Connected to Room (${roomId})`;
       document.getElementById('btnTurnOnGPS').className = 'btn-gps connected';
       document.getElementById('btnText').innerText = "✓ Continuous GPS Live (1s)";
+      const stopBtn = document.getElementById('btnStopGPS');
+      if (stopBtn) stopBtn.style.display = 'block';
       document.getElementById('telemetryGrid').style.display = 'grid';
 
       if (liveIntervalId) clearInterval(liveIntervalId);
-      if (workerTimer) workerTimer.postMessage('stop');
+      if (workerTimer) {
+        try { workerTimer.postMessage('stop'); } catch(e){}
+      }
       if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
 
       const pollGPS = () => {
